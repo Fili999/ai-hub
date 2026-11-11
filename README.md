@@ -14,7 +14,7 @@
 [![Zero dependencies](https://img.shields.io/badge/npm%20dependencies-0-7ee0a8.svg)](package.json)
 [![Windows · macOS · Linux](https://img.shields.io/badge/platform-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-ffb454.svg)](#download)
 
-[**⬇ Download**](#download) &nbsp;·&nbsp; [Quick start](#quick-start) &nbsp;·&nbsp; [Features](#features) &nbsp;·&nbsp; [Works with](#works-with) &nbsp;·&nbsp; [Docs](#documentation)
+[**⬇ Download**](#download) &nbsp;·&nbsp; [Quick start](#quick-start) &nbsp;·&nbsp; [Features](#features) &nbsp;·&nbsp; [Works with](#works-with) &nbsp;·&nbsp; [Screenshots](#screenshots) &nbsp;·&nbsp; [Docs](#documentation)
 
 </div>
 
@@ -109,6 +109,25 @@ flowchart LR
 ```
 
 You keep your skills and agents as plain files in the hub (`skills/own`, `agents/own`). `sync` installs them into your tools; the catalog index lets the orchestrator find the right ones *without* reading hundreds of files, which keeps token use low.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><a href="docs/assets/screenshots/graph.png"><img src="docs/assets/screenshots/graph.png" alt="Graph of agents and skills"></a><br><sub><b>Graph</b> — agents (squares) and the skills they use</sub></td>
+    <td width="50%"><a href="docs/assets/screenshots/create.png"><img src="docs/assets/screenshots/create.png" alt="Create tab: model and effort per AI tool"></a><br><sub><b>Create</b> — one agent, model and effort for every AI tool</sub></td>
+  </tr>
+  <tr>
+    <td><a href="docs/assets/screenshots/welcome.png"><img src="docs/assets/screenshots/welcome.png" alt="Welcome page"></a><br><sub><b>Welcome</b> — AI tools and security, in a minute</sub></td>
+    <td><a href="docs/assets/screenshots/system.png"><img src="docs/assets/screenshots/system.png" alt="System tab with AI tools"></a><br><sub><b>System</b> — what is installed where, last sync</sub></td>
+  </tr>
+  <tr>
+    <td><a href="docs/assets/screenshots/catalog-light.png"><img src="docs/assets/screenshots/catalog-light.png" alt="Catalog in the light theme"></a><br><sub><b>Catalog</b> — search, categories, risk (light theme)</sub></td>
+    <td><a href="docs/assets/screenshots/flow.png"><img src="docs/assets/screenshots/flow.png" alt="Flow view"></a><br><sub><b>Flow</b> — type a goal, see what the orchestrator would use</sub></td>
+  </tr>
+</table>
+
+<sub>Screenshots show an example hub with a few extra sample skills and agents.</sub>
 
 ## Starter content
 
