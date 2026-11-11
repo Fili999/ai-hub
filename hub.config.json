@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "categories": {
+    "meta": {
+      "label": "Hub and Orchestration",
+      "keywords": ["orchestrator", "orchestrate", "catalog", "skill", "skills", "agent", "agents", "hub", "install", "assign"]
+    },
+    "dev-app": {
+      "label": "App Development",
+      "keywords": ["app", "mobile", "flutter", "android", "ios", "swift", "kotlin", "application", "development", "programming", "coding", "code", "backend", "api", "database", "refactoring"]
+    },
+    "dev-web": {
+      "label": "Web Development",
+      "keywords": ["site", "web", "website", "webpage", "page", "frontend", "html", "css", "javascript", "react", "nextjs", "landing", "deploy", "hosting"]
+    },
+    "video": {
+      "label": "Video and Animation",
+      "keywords": ["video", "editing", "clip", "animation", "animated", "script", "screenplay", "voiceover", "subtitles", "captions", "youtube", "reel", "short", "ffmpeg", "thumbnail"]
+    },
+    "social": {
+      "label": "Content and Social Media",
+      "keywords": ["social", "post", "instagram", "tiktok", "facebook", "linkedin", "content", "caption", "hashtag", "editorial", "community", "newsletter"]
+    },
+    "security": {
+      "label": "Security",
+      "keywords": ["security", "pentest", "vulnerability", "vulnerabilities", "audit", "owasp", "hardening", "penetration", "dependencies", "secrets"]
+    },
+    "marketing": {
+      "label": "Marketing",
+      "keywords": ["marketing", "campaign", "campaigns", "promo", "promotion", "advertising", "ads", "brand", "funnel", "copywriting", "launch", "acquisition"]
+    },
+    "business": {
+      "label": "Business and Strategy",
+      "keywords": ["business", "plan", "market", "competitor", "competitors", "price", "pricing", "monetization", "strategy", "analysis", "feasibility"]
+    },
+    "project-mgmt": {
+      "label": "Project Management",
+      "keywords": ["project", "projects", "scheduling", "schedule", "calendar", "task", "tasks", "roadmap", "planning", "deadline", "milestone", "todo", "sprint"]
+    },
+    "research": {
+      "label": "Research and Documentation",
+      "keywords": ["research", "search", "sources", "synthesis", "summary", "documentation", "comparison", "investigation"]
+    },
+    "testing": {
+      "label": "Testing and Quality",
+      "keywords": ["test", "testing", "qa", "unit", "e2e", "debug", "bug", "regression", "quality"]
+    },
+    "seo": {
+      "label": "SEO",
+      "keywords": ["seo", "keyword", "keywords", "ranking", "backlink", "sitemap", "metadata", "positioning"]
+    },
+    "design": {
+      "label": "Design and Images",
+      "keywords": ["design", "ui", "ux", "graphics", "logo", "image", "images", "mockup", "figma", "palette", "icon", "icons"]
+    },
+    "data": {
+      "label": "Data and Reports",
+      "keywords": ["data", "analytics", "dashboard", "sql", "csv", "excel", "chart", "charts", "report", "reports"]
+    }
+  },
+  "synonymGroups": [
+    ["video", "movie", "clip"],
+    ["image", "images", "photo", "picture"],
+    ["site", "website", "web", "webpage"],
+    ["security", "safeguard"],
+    ["test", "testing", "check"],
+    ["research", "search", "lookup"],
+    ["script", "screenplay"],
+    ["editing", "edit", "montage"],
+    ["animation", "animated", "animate"],
+    ["programming", "coding", "code", "development", "develop"],
+    ["price", "pricing"],
+    ["competitor", "competitors", "competition"],
+    ["campaign", "campaigns"],
+    ["planning", "scheduling", "schedule", "calendar"],
+    ["application", "app", "mobile"],
+    ["bug", "debug", "error", "errors"],
+    ["vulnerability", "vulnerabilities", "flaw"]
+  ]
+}

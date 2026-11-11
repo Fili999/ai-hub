@@ -1,0 +1,42 @@
+# Automatic tests on every push and pull request: checks that the hub really works on Linux, Windows and macOS.
+# Light matrix: Linux with Node 18 and 22, Windows and macOS with Node 22.
+name: test
+
+# Only on main and on pull requests (plus manual runs): a branch that is already in a pull request does not run twice.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }} · Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, node: 18 }
+          - { os: ubuntu-latest, node: 22 }
+          - { os: windows-latest, node: 22 }
+          - { os: macos-latest, node: 22 }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Git identity for the tests (local throwaway repositories)
+        run: |
+          git config --global user.name "ai-hub ci"
+          git config --global user.email "ci@example.invalid"
+          git config --global init.defaultBranch main
+      - run: npm test

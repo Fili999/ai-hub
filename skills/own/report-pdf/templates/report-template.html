@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{PROJECT_TITLE}} - Comprehensive Project Report</title>
+  
+  <!-- Google Fonts: Space Grotesk and Montserrat -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      /* Color Palette (customizable via brand-kit) */
+      --primary-color: {{PRIMARY_COLOR|#2563EB}};
+      --primary-light: {{PRIMARY_LIGHT|#EFF6FF}};
+      --secondary-color: {{SECONDARY_COLOR|#0F172A}};
+      --accent-color: {{ACCENT_COLOR|#F59E0B}};
+      --text-color: {{TEXT_COLOR|#1E293B}};
+      --text-muted: {{TEXT_MUTED|#64748B}};
+      --bg-color: #FFFFFF;
+      --card-bg: #F8FAFC;
+      --border-color: #E2E8F0;
+      
+      /* Typography Choices */
+      --font-title: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-body: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    @page {
+      size: A4 portrait;
+      margin: 22mm 18mm 22mm 18mm;
+      @bottom-left {
+        content: "{{PROJECT_TITLE}} — Confidential Report";
+        font-family: var(--font-body);
+        font-size: 8pt;
+        color: var(--text-muted);
+      }
+      @bottom-right {
+        content: "Page " counter(page);
+        font-family: var(--font-body);
+        font-size: 8pt;
+        font-weight: 500;
+        color: var(--text-muted);
+      }
+    }
+
+    @page:first {
+      margin: 0;
+      @bottom-left { content: none; }
+      @bottom-right { content: none; }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-body);
+      font-size: 10pt;
+      line-height: 1.6;
+      color: var(--text-color);
+      background: var(--bg-color);
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    /* General Typography & Emphasis */
+    h1, h2, h3, h4, h5, h6 {
+      font-family: var(--font-title);
+      color: var(--secondary-color);
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    p {
+      margin-bottom: 0.8em;
+    }
+
+    strong, b {
+      font-weight: 700;
+      color: var(--secondary-color);
+    }
+
+    em, i {
+      font-style: italic;
+      color: #334155;
+    }
+
+    /* Cover Page */
+    .cover-page {
+      page-break-after: always;
+      height: 100vh;
+      min-height: 297mm;
+      padding: 40mm 25mm 30mm 25mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+      color: #FFFFFF;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cover-page::before {
+      content: "";
+      position: absolute;
+      top: -100px;
+      right: -100px;
+      width: 350px;
+      height: 350px;
+      background: radial-gradient(circle, var(--primary-color) 0%, transparent 70%);
+      opacity: 0.35;
+      border-radius: 50%;
+    }
+
+    .cover-top {
+      position: relative;
+      z-index: 2;
+    }
+
+    .cover-logo-wrapper {
+      margin-bottom: 25mm;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .cover-logo {
+      max-height: 55px;
+      max-width: 180px;
+      object-fit: contain;
+    }
+
+    .cover-tagline-badge {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 8.5pt;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: var(--accent-color);
+      margin-bottom: 12mm;
+    }
+
+    .cover-title {
+      font-size: 32pt;
+      line-height: 1.15;
+      color: #FFFFFF;
+      margin-bottom: 6mm;
+      letter-spacing: -0.02em;
+    }
+
+    .cover-subtitle {
+      font-size: 13pt;
+      color: #94A3B8;
+      font-weight: 400;
+      line-height: 1.5;
+      max-width: 85%;
+    }
+
+    .cover-bottom {
+      position: relative;
+      z-index: 2;
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      padding-top: 8mm;
+      display: flex;
+      justify-content: space-between;
+      font-size: 9pt;
+      color: #94A3B8;
+    }
+
+    .cover-meta-item strong {
+      display: block;
+      color: #FFFFFF;
+      font-size: 10pt;
+      margin-bottom: 2px;
+    }
+
+    /* Chapter Structure */
+    .chapter {
+      page-break-before: always;
+      padding-top: 5mm;
+    }
+
+    .chapter-header {
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 5mm;
+      margin-bottom: 8mm;
+      position: relative;
+    }
+
+    .chapter-num {
+      display: inline-block;
+      font-family: var(--font-title);
+      font-size: 11pt;
+      font-weight: 700;
+      color: var(--primary-color);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 2mm;
+    }
+
+    .chapter-title {
+      font-size: 20pt;
+      letter-spacing: -0.01em;
+    }
+
+    .section-title {
+      font-size: 13pt;
+      margin-top: 6mm;
+      margin-bottom: 3mm;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title::before {
+      content: "";
+      display: inline-block;
+      width: 4px;
+      height: 14px;
+      background: var(--primary-color);
+      border-radius: 2px;
+    }
+
+    /* Key Highlights & Cards */
+    .highlight-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin: 6mm 0;
+      page-break-inside: avoid;
+    }
+
+    .highlight-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-left: 4px solid var(--primary-color);
+      border-radius: 8px;
+      padding: 12px 16px;
+    }
+
+    .highlight-card-title {
+      font-family: var(--font-title);
+      font-size: 10.5pt;
+      font-weight: 600;
+      color: var(--secondary-color);
+      margin-bottom: 4px;
+    }
+
+    .highlight-card-desc {
+      font-size: 9pt;
+      color: var(--text-color);
+      line-height: 1.45;
+    }
+
+    /* Callouts: Problems & Solutions */
+    .problem-solution-box {
+      margin: 6mm 0;
+      page-break-inside: avoid;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+
+    .problem-pane {
+      background: #FEF2F2;
+      border-bottom: 1px dashed #FECACA;
+      padding: 12px 16px;
+    }
+
+    .problem-header {
+      font-family: var(--font-title);
+      font-weight: 700;
+      font-size: 9.5pt;
+      color: #991B1B;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .solution-pane {
+      background: #F0FDF4;
+      padding: 12px 16px;
+    }
+
+    .solution-header {
+      font-family: var(--font-title);
+      font-weight: 700;
+      font-size: 9.5pt;
+      color: #166534;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .why-pane {
+      background: #F8FAFC;
+      border-top: 1px solid var(--border-color);
+      padding: 10px 16px;
+      font-size: 8.5pt;
+      color: var(--text-muted);
+    }
+
+    /* Milestone Timeline */
+    .milestone-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 6mm 0;
+      page-break-inside: avoid;
+    }
+
+    .milestone-table th {
+      background: var(--secondary-color);
+      color: #FFFFFF;
+      font-family: var(--font-title);
+      font-size: 8.5pt;
+      text-align: left;
+      padding: 8px 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    .milestone-table td {
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 12px;
+      font-size: 9pt;
+      vertical-align: top;
+    }
+
+    .milestone-table tr:nth-child(even) td {
+      background: #F8FAFC;
+    }
+
+    .badge-status {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 7.5pt;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-completed {
+      background: #DCFCE7;
+      color: #15803D;
+    }
+
+    .badge-progress {
+      background: #FEF3C7;
+      color: #B45309;
+    }
+
+    .badge-planned {
+      background: #E0E7FF;
+      color: #4338CA;
+    }
+
+    /* Table of Contents */
+    .toc-container {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 18px 24px;
+      margin: 8mm 0;
+      page-break-inside: avoid;
+    }
+
+    .toc-list {
+      list-style: none;
+    }
+
+    .toc-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px dotted var(--border-color);
+      font-size: 9.5pt;
+    }
+
+    .toc-item:last-child {
+      border-bottom: none;
+    }
+
+    .toc-title {
+      font-weight: 600;
+      color: var(--secondary-color);
+    }
+
+    .toc-page {
+      font-family: var(--font-title);
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+
+    /* Blockquote / Excerpt */
+    blockquote {
+      border-left: 3px solid var(--accent-color);
+      padding: 8px 16px;
+      margin: 5mm 0;
+      background: #FFFBEB;
+      border-radius: 0 6px 6px 0;
+      font-style: italic;
+      color: #78350F;
+      font-size: 9.5pt;
+    }
+
+    /* ================= SCREEN PREVIEW (BROWSER SCREEN VIEW) ================= */
+    @media screen {
+      body {
+        background-color: #0b132b;
+        background-image: radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.18) 0%, transparent 60%);
+        padding: 40px 20px;
+        color: var(--text-color);
+        min-height: 100vh;
+      }
+
+      .cover-page,
+      .chapter {
+        max-width: 880px;
+        margin: 0 auto 36px auto;
+        border-radius: 12px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.15);
+        overflow: hidden;
+      }
+
+      .cover-page {
+        height: auto;
+        min-height: 860px;
+        padding: 55px 48px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+      }
+
+      .chapter {
+        background: #ffffff;
+        padding: 50px 48px;
+        border: 1px solid var(--border-color);
+      }
+
+      .milestone-table {
+        overflow-x: auto;
+      }
+    }
+
+    @media screen and (max-width: 768px) {
+      body {
+        padding: 16px 10px;
+      }
+
+      .cover-page,
+      .chapter {
+        padding: 30px 20px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+      }
+
+      .cover-title {
+        font-size: 24pt;
+      }
+
+      .cover-subtitle {
+        font-size: 11pt;
+      }
+
+      .highlight-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .cover-bottom {
+        flex-direction: column;
+        gap: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- COVER PAGE -->
+  <div class="cover-page">
+    <div class="cover-top">
+      <div class="cover-logo-wrapper">
+        <!-- Logo image or SVG here -->
+        {{LOGO_HTML}}
+      </div>
+      <div class="cover-tagline-badge">{{TAGLINE}}</div>
+      <h1 class="cover-title">{{PROJECT_TITLE}}</h1>
+      <p class="cover-subtitle">{{PROJECT_DESCRIPTION}}</p>
+    </div>
+
+    <div class="cover-bottom">
+      <div class="cover-meta-item">
+        <strong>Author / Organization</strong>
+        <span>{{AUTHOR_NAME}}</span>
+      </div>
+      <div class="cover-meta-item">
+        <strong>Project Version</strong>
+        <span>{{PROJECT_VERSION}}</span>
+      </div>
+      <div class="cover-meta-item">
+        <strong>Report Date</strong>
+        <span>{{REPORT_DATE}}</span>
+      </div>
+      <div class="cover-meta-item">
+        <strong>Status</strong>
+        <span style="color: var(--accent-color); font-weight: 600;">{{PROJECT_STATUS}}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLE OF CONTENTS -->
+  <div class="chapter">
+    <div class="chapter-header">
+      <span class="chapter-num">Contents</span>
+      <h2 class="chapter-title">Table of Contents</h2>
+    </div>
+
+    <div class="toc-container">
+      <ul class="toc-list">
+        <li class="toc-item">
+          <span class="toc-title">01. Executive Summary & Key Highlights</span>
+          <span class="toc-page">Chapter 1</span>
+        </li>
+        <li class="toc-item">
+          <span class="toc-title">02. Vision & Problem Genesis</span>
+          <span class="toc-page">Chapter 2</span>
+        </li>
+        <li class="toc-item">
+          <span class="toc-title">03. Architecture, Stack & Technical Decisions</span>
+          <span class="toc-page">Chapter 3</span>
+        </li>
+        <li class="toc-item">
+          <span class="toc-title">04. Development Journey & Milestones</span>
+          <span class="toc-page">Chapter 4</span>
+        </li>
+        <li class="toc-item">
+          <span class="toc-title">05. Challenges Encountered & Solutions Adopted</span>
+          <span class="toc-page">Chapter 5</span>
+        </li>
+        <li class="toc-item">
+          <span class="toc-title">06. Current Status, Evaluation & Future Roadmap</span>
+          <span class="toc-page">Chapter 6</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- KEY HIGHLIGHTS -->
+    <h3 class="section-title">Key Project Highlights</h3>
+    <div class="highlight-grid">
+      {{HIGHLIGHT_CARDS}}
+    </div>
+  </div>
+
+  <!-- CHAPTER 1: VISION & THE WHY -->
+  <div class="chapter">
+    <div class="chapter-header">
+      <span class="chapter-num">Chapter 01</span>
+      <h2 class="chapter-title">Genesis, Vision & "The Why"</h2>
+    </div>
+    
+    {{CHAPTER_1_CONTENT}}
+  </div>
+
+  <!-- CHAPTER 2: ARCHITECTURE & TECHNICAL CHOICES -->
+  <div class="chapter">
+    <div class="chapter-header">
+      <span class="chapter-num">Chapter 02</span>
+      <h2 class="chapter-title">Architecture, Contracts & Technology Stack</h2>
+    </div>
+
+    {{CHAPTER_2_CONTENT}}
+  </div>
+
+  <!-- CHAPTER 3: MILESTONES & DEVELOPMENT -->
+  <div class="chapter">
+    <div class="chapter-header">
+      <span class="chapter-num">Chapter 03</span>
+      <h2 class="chapter-title">Development Journey & Milestones</h2>
+    </div>
+
+    <p>The following table chronologically reconstructs the key development milestones, from initial conception to stable releases:</p>
+
+    <table class="milestone-table">
+      <thead>
+        <tr>
+          <th style="width: 15%;">Date / Phase</th>
+          <th style="width: 25%;">Milestone</th>
+          <th style="width: 45%;">Description & Objectives Achieved</th>
+          <th style="width: 15%;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{MILESTONE_ROWS}}
+      </tbody>
+    </table>
+
+    {{CHAPTER_3_CONTENT}}
+  </div>
+
+  <!-- CHAPTER 4: CHALLENGES & SOLUTIONS -->
+  <div class="chapter">
+    <div class="chapter-header">
+      <span class="chapter-num">Chapter 04</span>
+      <h2 class="chapter-title">Challenges Encountered & Solutions Adopted</h2>
+    </div>
+
+    <p>Significant technical challenges were encountered and resolved during the project lifecycle. Root causes, applied solutions, and architectural rationales are documented below:</p>
+
+    {{PROBLEM_SOLUTION_BOXES}}
+  </div>
+
+  <!-- CHAPTER 5: CONCLUSIONS & ROADMAP -->
+  <div class="chapter">
+    <div class="chapter-header">
+      <span class="chapter-num">Chapter 05</span>
+      <h2 class="chapter-title">Conclusions, Current Status & Future Roadmap</h2>
+    </div>
+
+    {{CHAPTER_5_CONTENT}}
+  </div>
+
+</body>
+</html>

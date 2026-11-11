@@ -1,0 +1,18 @@
+node_modules/
+.tmp/
+.DS_Store
+Thumbs.db
+
+# The index is regenerated locally (inventory/sync/search): do not version it
+index/*.json
+
+# Obsidian UI state (changes constantly, different on each computer): notes are versioned
+memory/.obsidian/
+
+# Local machine settings (e.g. audio library folder): different on Windows and Mac
+local.json
+
+# Build output of .github/scripts/package.sh and packaging/build.mjs (the .app and the installer), and Node downloads
+dist/
+tmp/
+.cache/

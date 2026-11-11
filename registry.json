@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "overrides": {},
+  "links": [
+    {
+      "from": "agent:implementer",
+      "to": "skill:structured-handoff"
+    },
+    {
+      "from": "agent:planner",
+      "to": "skill:acceptance-criteria"
+    },
+    {
+      "from": "agent:planner",
+      "to": "skill:decision-record"
+    },
+    {
+      "from": "agent:planner",
+      "to": "skill:task-intake"
+    },
+    {
+      "from": "agent:researcher",
+      "to": "skill:memory"
+    },
+    {
+      "from": "agent:researcher",
+      "to": "skill:source-verification"
+    },
+    {
+      "from": "agent:reviewer",
+      "to": "skill:quality-gate"
+    },
+    {
+      "from": "agent:reviewer",
+      "to": "skill:self-critique"
+    }
+  ]
+}

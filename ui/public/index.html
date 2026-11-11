@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="__HUB_LANG__">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="hub-token" content="__HUB_TOKEN__">
+  <meta name="color-scheme" content="light dark">
+  <title>AI Hub</title>
+  <link rel="icon" id="favicon" type="image/svg+xml" href="brand/favicon-dark.svg">
+  <link rel="preload" href="fonts/space-grotesk-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/jetbrains-mono-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <script type="application/json" id="i18n">__HUB_I18N__</script>
+  <script src="js/theme-init.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip" href="#view">Skip to content</a>
+  <header class="top">
+    <a class="brand" href="#/graph" aria-label="AI Hub, go to graph">
+      <svg viewBox="0 0 64 64" width="28" height="28" aria-hidden="true">
+        <path d="M24 24 L42 42" class="brand-wire"/>
+        <rect x="5" y="5" width="24" height="24" rx="6" class="brand-agent"/>
+        <circle cx="46" cy="46" r="12" class="brand-skill"/>
+        <circle cx="33.25" cy="33.25" r="3.4" class="brand-dot"/>
+      </svg>
+      <span>ai-hub</span>
+    </a>
+    <nav class="tabs" id="tabs" aria-label="Sections"></nav>
+    <div class="top-right">
+      <span class="live" id="live" role="status" title="Real-time connection with hub files"></span>
+      <button class="sync" id="sync" type="button" data-tone="idle" aria-haspopup="dialog">GitHub</button>
+      <span class="fp" id="fp" hidden></span>
+      <a class="btn ghost icon-only" id="settings" href="#/settings" aria-label="Settings" title="Settings"></a>
+      <button class="btn ghost icon-only" id="theme" type="button"></button>
+    </div>
+  </header>
+  <main id="view" tabindex="-1"></main>
+  <aside id="drawer" class="drawer" aria-label="Detail" hidden></aside>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

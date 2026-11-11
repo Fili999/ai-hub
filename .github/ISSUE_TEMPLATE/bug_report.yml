@@ -1,0 +1,48 @@
+name: Bug report
+description: Something does not work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. npm run setup\n2. ..."
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [Windows, macOS, Linux]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "Contents of VERSION.txt, or `version` in package.json"
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version
+      description: "Output of `node --version`"
+  - type: checkboxes
+    id: tools
+    attributes:
+      label: AI tools involved
+      options:
+        - label: Claude Code
+        - label: Codex
+        - label: Antigravity CLI
+        - label: OpenCode / local models
+  - type: textarea
+    id: logs
+    attributes:
+      label: Output of `npm run doctor` and the error message
+      render: shell
+      description: Remove any private data before pasting.

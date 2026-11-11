@@ -1,0 +1,4 @@
+#!/bin/sh
+# After every "git pull": regenerates index and re-syncs AI tools.
+# Enable with: npm run setup-hooks
+node scripts/sync.mjs --quiet || echo "ai-hub: sync failed, run: npm run sync"

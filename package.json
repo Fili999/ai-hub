@@ -1,0 +1,57 @@
+{
+  "name": "ai-hub",
+  "version": "0.1.1",
+  "private": true,
+  "description": "Open-source hub of skills, agents, workflows and teams for Claude Code, Codex, Antigravity CLI and local models. Configure it your way.",
+  "license": "MIT",
+  "homepage": "https://github.com/Fili999/ai-hub#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Fili999/ai-hub.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Fili999/ai-hub/issues"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "skills",
+    "claude-code",
+    "codex",
+    "antigravity-cli",
+    "opencode",
+    "ollama",
+    "workflows",
+    "orchestration",
+    "agent-skills",
+    "mcp"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node ui/server.mjs",
+    "ui": "node ui/server.mjs",
+    "setup": "node scripts/setup.mjs",
+    "needs": "node scripts/needs.mjs",
+    "guide": "node scripts/guide.mjs",
+    "inventory": "node scripts/inventory.mjs",
+    "search": "node scripts/search.mjs",
+    "route": "node scripts/route.mjs",
+    "usage": "node scripts/usage.mjs",
+    "memory": "node scripts/memory.mjs",
+    "evaluate": "node scripts/evaluate.mjs",
+    "team": "node scripts/team.mjs",
+    "doctor": "node scripts/doctor.mjs",
+    "add": "node scripts/install.mjs",
+    "link": "node scripts/link.mjs",
+    "sync": "node scripts/sync.mjs",
+    "update": "node scripts/update.mjs",
+    "shortcut": "node scripts/shortcut.mjs",
+    "setup-hooks": "git config core.hooksPath .githooks",
+    "package:mac": "node packaging/build.mjs mac",
+    "package:win": "node packaging/build.mjs win",
+    "test": "node --test tests/hub.test.mjs tests/pure.test.mjs tests/ui.test.mjs tests/setup.test.mjs tests/guide.test.mjs tests/repo.test.mjs tests/create.test.mjs tests/settings.test.mjs tests/approval.test.mjs tests/skills.test.mjs tests/routing.test.mjs tests/usage.test.mjs tests/memory.test.mjs tests/evaluation.test.mjs tests/teams.test.mjs tests/providers.test.mjs tests/english-output.test.mjs tests/app.test.mjs"
+  }
+}

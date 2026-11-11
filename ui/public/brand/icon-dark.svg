@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="ai-hub">
+  <defs>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect x="8" y="8" width="496" height="496" rx="112" fill="#0a1326" stroke="rgba(110,160,255,0.28)" stroke-width="4"/>
+  <g transform="translate(96 96) scale(5)" filter="url(#glow)">
+  <path d="M24 24 L42 42" stroke="#e9f1ff" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <rect x="5" y="5" width="24" height="24" rx="6" fill="#4d8fff"/>
+  <circle cx="46" cy="46" r="12" fill="#4fd1ff"/>
+  <circle cx="33.25" cy="33.25" r="3.4" fill="#ffb454" stroke="#0a1326" stroke-width="1.6"/>
+  </g>
+</svg>

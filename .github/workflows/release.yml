@@ -1,0 +1,124 @@
+# Builds the downloadable files and attaches them all to ONE GitHub Release:
+#   - the classic bundles (ai-hub-windows.zip, ai-hub-macos.zip): unzip, needs Node.js on the computer;
+#   - the apps with Node included: AI-Hub-mac-apple-silicon.zip, AI-Hub-mac-intel.zip (the .app) and AI-Hub-Setup.exe.
+# The release is created as a DRAFT: look at it (and try the installer on Windows once), then press Publish.
+# Publish a release by pushing a tag equal to "version" in package.json:   git tag v0.2.0 && git push origin v0.2.0
+# Manual run (Actions tab → release → Run workflow): builds everything and keeps it as workflow artifacts only.
+# The app file names are fixed, so ".../releases/latest/download/AI-Hub-Setup.exe" always points to the newest one.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bundles:
+    name: Classic bundles
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Git identity for the tests
+        run: |
+          git config --global user.name "ai-hub ci"
+          git config --global user.email "ci@example.invalid"
+          git config --global init.defaultBranch main
+      - name: Tag matches package.json
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: test "v$(node -p "require('./package.json').version")" = "${GITHUB_REF_NAME}"
+      - run: npm test
+      - name: Build the bundles
+        run: .github/scripts/package.sh dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundles
+          path: dist/*
+          if-no-files-found: error
+
+  mac:
+    name: Mac app (${{ matrix.arch }})
+    runs-on: macos-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64, x64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node packaging/build.mjs mac --arch ${{ matrix.arch }}
+      - name: Smoke test (Apple Silicon build runs on this machine)
+        if: matrix.arch == 'arm64'
+        run: |
+          R="dist/AI Hub.app/Contents/Resources"
+          export AI_HUB_HOME="$RUNNER_TEMP/ai-hub-home"
+          "$R/node/bin/node" "$R/hub/scripts/app-launcher.mjs" --no-open --idle-minutes 5 &
+          for i in $(seq 1 40); do [ -f "$AI_HUB_HOME/.tmp/app.json" ] && break; sleep 0.5; done
+          URL=$(node -p "require('$AI_HUB_HOME/.tmp/app.json').url")
+          curl -fsS "${URL}api/health" | grep ai-hub-ui
+          "$R/node/bin/node" "$R/hub/scripts/app-launcher.mjs" --stop
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-${{ matrix.arch }}
+          path: dist/AI-Hub-mac-*.zip
+          if-no-files-found: error
+
+  windows:
+    name: Windows installer
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: NSIS (installer compiler)
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\NSIS\makensis.exe")) { choco install nsis -y --no-progress }
+      - run: node packaging/build.mjs win
+      - name: Smoke test (the bundled Node starts the hub)
+        shell: bash
+        run: |
+          export AI_HUB_HOME="$RUNNER_TEMP/ai-hub-home"
+          N="dist/win-stage/node/node.exe"; L="dist/win-stage/hub/scripts/app-launcher.mjs"
+          "$N" "$L" --no-open --idle-minutes 5 &
+          for i in $(seq 1 40); do [ -f "$AI_HUB_HOME/.tmp/app.json" ] && break; sleep 0.5; done
+          URL=$(node -p "require(process.argv[1]).url" "$(cygpath -m "$AI_HUB_HOME/.tmp/app.json")")
+          curl -fsS "${URL}api/health" | grep ai-hub-ui
+          "$N" "$L" --stop
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/AI-Hub-Setup.exe
+          if-no-files-found: error
+
+  release:
+    name: Draft release
+    needs: [bundles, mac, windows]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          merge-multiple: true
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -l assets
+          gh release create "${GITHUB_REF_NAME}" assets/* --repo "${GITHUB_REPOSITORY}" --draft --generate-notes \
+            --title "AI Hub ${GITHUB_REF_NAME}" \
+            --notes "**Easiest:** Windows → AI-Hub-Setup.exe. Mac → AI-Hub-mac-apple-silicon.zip (M1 or newer) or AI-Hub-mac-intel.zip: unzip, drag AI Hub to Applications. No Node.js needed. The apps are not signed, so the first launch shows a warning: Mac right-click → Open, Windows More info → Run anyway. **Alternative:** ai-hub-windows.zip / ai-hub-macos.zip (need Node.js), unzip and follow START-HERE.txt. Checksums of the bundles are in SHA256SUMS.txt."

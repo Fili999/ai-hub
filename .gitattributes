@@ -1,0 +1,19 @@
+# Consistent line endings across Mac, Linux, and Windows: avoids ghost diffs and broken hooks/scripts
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.mp4 binary
+*.mov binary
+# Windows batch scripts require CRLF (with LF "goto" may jump to wrong label); Mac/Linux use LF
+*.cmd text eol=crlf
+*.command text eol=lf
+*.sh text eol=lf
+*.ico binary
+*.icns binary
+*.woff2 binary
+# Third-party content: exact bytes without line ending conversions so SHA-256 approved hash is identical
+# on Windows and Mac. Placed at the end to take precedence over earlier rules (including *.cmd).
+skills/external/** -text
+agents/external/** -text

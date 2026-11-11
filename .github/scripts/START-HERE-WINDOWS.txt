@@ -1,0 +1,23 @@
+AI Hub - Windows
+================
+
+1. Unzip this folder somewhere you like (right-click the .zip -> "Extract All"),
+   for example into Documents. Do not run it from inside the .zip.
+
+2. The first time, double-click  bootstrap.cmd
+   It checks Node.js (version 18 or newer), offers to install what is missing
+   with winget (it always asks first), then runs the guided setup.
+   If it installed something, close the window and run bootstrap.cmd once more.
+
+3. From then on, double-click  start.cmd
+   The interface opens in your browser. Close the black window to stop it.
+   Tip: "npm run shortcut" (in a terminal inside this folder) puts a shortcut on your desktop.
+
+Windows SmartScreen may say "Windows protected your PC": the scripts are plain text
+and not code-signed. Click "More info" -> "Run anyway" if you trust this download.
+
+Minimum: Windows 10 or 11 (64-bit), Node.js 18+ (installed for you if missing),
+about 200 MB of free disk space, a modern web browser.
+Optional: Git (installing skills from GitHub), one AI tool (Claude Code, Codex, Antigravity CLI or OpenCode).
+
+Docs: GUIDE.md.

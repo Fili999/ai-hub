@@ -1,0 +1,9 @@
+# Every change needs a review from the owner (enforced once branch protection requires code-owner review).
+* @Fili999
+
+# Security-sensitive code and the release/legal files: always the owner.
+/ui/server.mjs @Fili999
+/scripts/lib/ @Fili999
+/.github/ @Fili999
+/LICENSE @Fili999
+/SECURITY.md @Fili999

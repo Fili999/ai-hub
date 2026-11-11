@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="256" height="256" role="img" aria-label="ai-hub">
+  <path d="M24 24 L42 42" stroke="#e9f1ff" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <rect x="5" y="5" width="24" height="24" rx="6" fill="#4d8fff"/>
+  <circle cx="46" cy="46" r="12" fill="#4fd1ff"/>
+  <circle cx="33.25" cy="33.25" r="3.4" fill="#ffb454" stroke="#050a16" stroke-width="1.6"/>
+</svg>

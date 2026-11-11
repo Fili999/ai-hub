@@ -1,0 +1,316 @@
+{
+  "version": 1,
+  "tools": [
+    {
+      "id": "node",
+      "name": "Node.js",
+      "level": "required",
+      "why": "Runs every hub script and the web interface.",
+      "check": {
+        "command": "node",
+        "args": [
+          "--version"
+        ],
+        "minVersion": "18"
+      },
+      "install": {
+        "win32": {
+          "manager": "winget",
+          "package": "OpenJS.NodeJS.LTS"
+        },
+        "darwin": {
+          "manager": "brew",
+          "package": "node"
+        }
+      },
+      "manual": "https://nodejs.org/en/download"
+    },
+    {
+      "id": "git",
+      "name": "Git",
+      "level": "required",
+      "why": "Installs skills and agents from GitHub and, if you turn it on, syncs the hub between your computers.",
+      "check": {
+        "command": "git",
+        "args": [
+          "--version"
+        ],
+        "minVersion": "2.25"
+      },
+      "install": {
+        "win32": {
+          "manager": "winget",
+          "package": "Git.Git"
+        },
+        "darwin": {
+          "manager": "brew",
+          "package": "git"
+        }
+      },
+      "manual": "https://git-scm.com/downloads"
+    },
+    {
+      "id": "claude",
+      "name": "Claude Code",
+      "level": "optional",
+      "why": "AI tool: reads the hub's skills and agents from ~/.claude. Install it only if you use it.",
+      "check": {
+        "command": "claude",
+        "args": [
+          "--version"
+        ]
+      },
+      "install": {
+        "win32": {
+          "manager": "winget",
+          "package": "Anthropic.ClaudeCode"
+        },
+        "darwin": {
+          "manager": "brew",
+          "package": "claude-code",
+          "cask": true
+        },
+        "linux": {
+          "manager": "npm",
+          "package": "@anthropic-ai/claude-code"
+        }
+      },
+      "manual": "https://docs.claude.com/en/docs/claude-code/overview"
+    },
+    {
+      "id": "codex",
+      "name": "Codex CLI (OpenAI)",
+      "level": "optional",
+      "why": "AI tool: reads skills from ~/.agents/skills and agents from ~/.codex/agents. Install it only if you use it.",
+      "check": {
+        "command": "codex",
+        "args": [
+          "--version"
+        ]
+      },
+      "install": {
+        "win32": {
+          "manager": "npm",
+          "package": "@openai/codex"
+        },
+        "darwin": {
+          "manager": "npm",
+          "package": "@openai/codex"
+        },
+        "linux": {
+          "manager": "npm",
+          "package": "@openai/codex"
+        }
+      },
+      "manual": "https://developers.openai.com/codex"
+    },
+    {
+      "id": "antigravity",
+      "name": "Antigravity CLI",
+      "level": "optional",
+      "why": "AI tool: reads skills from ~/.gemini/config/skills and agents from ~/.gemini/config/agents. Install it only if you use it.",
+      "check": {
+        "command": "agy"
+      },
+      "manual": "https://antigravity.google/download"
+    },
+    {
+      "id": "opencode",
+      "name": "OpenCode (local models)",
+      "level": "optional",
+      "why": "AI tool for local models (Ollama, LM Studio…) and many providers: reads skills from ~/.agents/skills and agents from ~/.config/opencode/agents.",
+      "check": {
+        "command": "opencode",
+        "args": [
+          "--version"
+        ]
+      },
+      "install": {
+        "win32": {
+          "manager": "npm",
+          "package": "opencode-ai"
+        },
+        "darwin": {
+          "manager": "npm",
+          "package": "opencode-ai"
+        },
+        "linux": {
+          "manager": "npm",
+          "package": "opencode-ai"
+        }
+      },
+      "manual": "https://opencode.ai/docs/"
+    },
+    {
+      "id": "uv",
+      "name": "uv",
+      "level": "recommended",
+      "why": "Installs Python tools such as NVIDIA SkillSpector (downloads the Python version it needs by itself).",
+      "check": {
+        "command": "uv",
+        "args": [
+          "--version"
+        ]
+      },
+      "install": {
+        "win32": {
+          "manager": "winget",
+          "package": "astral-sh.uv"
+        },
+        "darwin": {
+          "manager": "brew",
+          "package": "uv"
+        }
+      },
+      "manual": "https://docs.astral.sh/uv/getting-started/installation/"
+    },
+    {
+      "id": "skillspector",
+      "name": "NVIDIA SkillSpector",
+      "level": "recommended",
+      "why": "Scans skills and agents downloaded from GitHub for security problems before they are installed (Settings → Security). Apache-2.0.",
+      "check": {
+        "command": "skillspector",
+        "args": [
+          "--version"
+        ]
+      },
+      "install": {
+        "win32": {
+          "manager": "uv",
+          "package": "git+https://github.com/NVIDIA/skillspector.git",
+          "python": "3.12"
+        },
+        "darwin": {
+          "manager": "uv",
+          "package": "git+https://github.com/NVIDIA/skillspector.git",
+          "python": "3.12"
+        },
+        "linux": {
+          "manager": "uv",
+          "package": "git+https://github.com/NVIDIA/skillspector.git",
+          "python": "3.12"
+        }
+      },
+      "manual": "https://github.com/NVIDIA/SkillSpector#installation"
+    },
+    {
+      "id": "gh",
+      "name": "GitHub CLI",
+      "level": "optional",
+      "why": "Handy for private repositories (gh auth login) and for creating repositories from the terminal.",
+      "check": {
+        "command": "gh",
+        "args": [
+          "--version"
+        ]
+      },
+      "install": {
+        "win32": {
+          "manager": "winget",
+          "package": "GitHub.cli"
+        },
+        "darwin": {
+          "manager": "brew",
+          "package": "gh"
+        }
+      },
+      "manual": "https://cli.github.com"
+    }
+  ],
+  "commandProviders": {
+    "_note": "If a skill declares 'requires-commands: ffmpeg' and the command is missing, 'npm run setup' knows how to install it via this table.",
+    "ffmpeg": {
+      "name": "FFmpeg",
+      "install": {
+        "win32": {
+          "manager": "winget",
+          "package": "Gyan.FFmpeg"
+        },
+        "darwin": {
+          "manager": "brew",
+          "package": "ffmpeg"
+        }
+      }
+    },
+    "ffprobe": {
+      "name": "FFmpeg (ffprobe)",
+      "install": {
+        "win32": {
+          "manager": "winget",
+          "package": "Gyan.FFmpeg"
+        },
+        "darwin": {
+          "manager": "brew",
+          "package": "ffmpeg"
+        }
+      }
+    },
+    "yt-dlp": {
+      "name": "yt-dlp",
+      "install": {
+        "win32": {
+          "manager": "winget",
+          "package": "yt-dlp.yt-dlp"
+        },
+        "darwin": {
+          "manager": "brew",
+          "package": "yt-dlp"
+        }
+      }
+    },
+    "jq": {
+      "name": "jq",
+      "install": {
+        "win32": {
+          "manager": "winget",
+          "package": "jqlang.jq"
+        },
+        "darwin": {
+          "manager": "brew",
+          "package": "jq"
+        }
+      }
+    },
+    "rg": {
+      "name": "ripgrep",
+      "install": {
+        "win32": {
+          "manager": "winget",
+          "package": "BurntSushi.ripgrep.MSVC"
+        },
+        "darwin": {
+          "manager": "brew",
+          "package": "ripgrep"
+        }
+      }
+    },
+    "pandoc": {
+      "name": "Pandoc",
+      "install": {
+        "win32": {
+          "manager": "winget",
+          "package": "JohnMacFarlane.Pandoc"
+        },
+        "darwin": {
+          "manager": "brew",
+          "package": "pandoc"
+        }
+      }
+    },
+    "gh": {
+      "name": "GitHub CLI",
+      "install": {
+        "win32": {
+          "manager": "winget",
+          "package": "GitHub.cli"
+        },
+        "darwin": {
+          "manager": "brew",
+          "package": "gh"
+        }
+      }
+    }
+  },
+  "_note": "System programs of the hub. 'npm run setup' reads this file, checks what is missing and (with your consent) installs it. Commands are built by the script from 'manager' + 'package': never write free commands here. Allowed managers: winget, brew, npm, uv (for uv the package may be git+https://github.com/owner/repo.git). 'why' can be a text or {\"en\": …}. 'npm run needs' does the same for the programs that skills and agents require."
+}

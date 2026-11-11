@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "_note": "AI tools the hub can install skills and agents into. Model names and effort levels change often and depend on your account: edit the lists freely (or pick 'custom' in the Create tab). Paths use ~ for your home folder.",
+  "providers": {
+    "claude": {
+      "name": "Claude Code",
+      "command": "claude",
+      "home": "~/.claude",
+      "homeEnv": "CLAUDE_CONFIG_DIR",
+      "skillsDir": "~/.claude/skills",
+      "agentsDir": "~/.claude/agents",
+      "agentFormat": "claude-md",
+      "instructionsFile": "~/.claude/CLAUDE.md",
+      "skillModel": true,
+      "models": ["opus", "sonnet", "haiku", "fable"],
+      "efforts": ["low", "medium", "high", "xhigh", "max"],
+      "tiers": { "high": "opus", "balanced": "sonnet", "fast": "haiku" },
+      "effortMap": { "low": "low", "medium": "medium", "high": "high", "max": "max" },
+      "docs": "https://docs.claude.com/en/docs/claude-code/overview"
+    },
+    "codex": {
+      "name": "Codex (OpenAI)",
+      "command": "codex",
+      "home": "~/.codex",
+      "homeEnv": "CODEX_HOME",
+      "skillsDir": "~/.agents/skills",
+      "agentsDir": "~/.codex/agents",
+      "agentFormat": "codex-toml",
+      "instructionsFile": "~/.codex/AGENTS.md",
+      "skillModel": false,
+      "models": [],
+      "efforts": ["minimal", "low", "medium", "high", "xhigh", "max"],
+      "tiers": {},
+      "effortMap": { "low": "low", "medium": "medium", "high": "high", "max": "xhigh" },
+      "docs": "https://developers.openai.com/codex"
+    },
+    "antigravity": {
+      "name": "Antigravity CLI",
+      "command": "agy",
+      "home": "~/.gemini",
+      "skillsDir": "~/.gemini/config/skills",
+      "agentsDir": "~/.gemini/config/agents",
+      "agentFormat": "antigravity-md",
+      "instructionsFile": "~/.gemini/GEMINI.md",
+      "skillModel": false,
+      "models": ["pro", "flash"],
+      "efforts": [],
+      "tiers": { "high": "pro", "balanced": "inherit", "fast": "flash" },
+      "effortMap": {},
+      "docs": "https://antigravity.google/docs/getting-started?tab=cli"
+    },
+    "opencode": {
+      "name": "OpenCode (local models: Ollama, LM Studio…)",
+      "command": "opencode",
+      "home": "~/.config/opencode",
+      "skillsDir": "~/.agents/skills",
+      "agentsDir": "~/.config/opencode/agents",
+      "agentFormat": "opencode-md",
+      "instructionsFile": "~/.config/opencode/AGENTS.md",
+      "skillModel": false,
+      "models": [],
+      "efforts": ["low", "medium", "high"],
+      "tiers": {},
+      "effortMap": { "low": "low", "medium": "medium", "high": "high", "max": "high" },
+      "docs": "https://opencode.ai/docs/"
+    }
+  }
+}

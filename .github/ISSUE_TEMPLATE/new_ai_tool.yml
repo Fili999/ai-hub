@@ -1,0 +1,21 @@
+name: Support for a new AI tool
+description: Ask for (or offer) an adapter for another AI coding tool
+labels: [provider]
+body:
+  - type: input
+    id: tool
+    attributes:
+      label: Tool name and link to its documentation
+    validations:
+      required: true
+  - type: textarea
+    id: paths
+    attributes:
+      label: Where does it read skills, agents and instructions?
+      description: Folders, file formats, and any model / effort settings for agents.
+  - type: checkboxes
+    id: pr
+    attributes:
+      label: Contribution
+      options:
+        - label: I can open a pull request (see CONTRIBUTING.md, "Adding an AI tool")
