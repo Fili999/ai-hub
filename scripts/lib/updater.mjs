@@ -276,11 +276,20 @@ export async function applyUpdate(root, { fetchImpl = fetch, now = Date.now() } 
     try {
       result = syncManaged(dir, root, { manifest });
     } catch (e) {
+      // undo as much as possible, entry by entry: one entry that cannot be undone (for example a file that was never
+      // created because a path component is a file, which some Node versions report as ENOTDIR) must not stop the rest
+      const attempt = (fn) => {
+        try {
+          fn();
+        } catch {
+          /* keep going */
+        }
+      };
       for (const rel of touched) {
         const saved = path.join(backup, rel);
-        if (fs.existsSync(saved)) fs.copyFileSync(saved, path.join(root, ...rel.split('/')));
+        if (fs.existsSync(saved)) attempt(() => fs.copyFileSync(saved, path.join(root, ...rel.split('/'))));
       }
-      for (const rel of plan.copied) rmrf(path.join(root, ...rel.split('/')));
+      for (const rel of plan.copied) attempt(() => rmrf(path.join(root, ...rel.split('/'))));
       throw new UpdateError(t('update.error.applyFailed', { message: e.message }));
     }
     return { from: info.current, to: release.version, copied: result.copied.length, updated: result.updated.length, kept: result.kept.length, removed: result.removed.length };
