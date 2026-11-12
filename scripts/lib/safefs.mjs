@@ -97,6 +97,9 @@ function sameFile(fd, file) {
 export function createFileExclusive(root, parts, data, { hooks = {}, t = tFor() } = {}) {
   const dir = safeDir(root, parts.slice(0, -1), { create: true, t });
   const file = path.join(dir, parts.at(-1));
+  // Any existing entry (a link too, even a dangling one) means "exists". POSIX gets this from O_EXCL|O_NOFOLLOW;
+  // Windows has no O_NOFOLLOW and would create the file BEHIND a dangling link, so check explicitly.
+  if (lstatOrNull(file)) throw Object.assign(new Error(`EEXIST: ${parts.at(-1)}`), { code: 'EEXIST' });
   hooks.beforeOpen?.(file);
   let fd;
   try {
@@ -120,13 +123,25 @@ export function createFileExclusive(root, parts, data, { hooks = {}, t = tFor() 
 }
 
 function undoCreated(fd, intended) {
-  // Find where the descriptor's file really is: resolve the intended parent through realpath.
+  // Where is the file behind our descriptor? Either behind a link planted at `intended` (realpath of it), or in a
+  // folder that was redirected (realpath of the parent). Only a file with our own device/inode is ever removed.
+  const candidates = [];
   try {
-    const real = fs.realpathSync(path.dirname(intended));
-    const actual = path.join(real, path.basename(intended));
+    candidates.push(fs.realpathSync(intended));
+  } catch {
+    /* not a link to something that exists */
+  }
+  try {
+    candidates.push(path.join(fs.realpathSync(path.dirname(intended)), path.basename(intended)));
+  } catch {
+    /* parent gone */
+  }
+  try {
     const a = fs.fstatSync(fd);
-    const b = fs.lstatSync(actual);
-    if (b.isFile() && a.ino === b.ino && a.dev === b.dev) fs.unlinkSync(actual);
+    for (const c of candidates) {
+      const b = fs.lstatSync(c);
+      if (b.isFile() && a.ino === b.ino && a.dev === b.dev) return fs.unlinkSync(c);
+    }
   } catch {
     /* nothing more can be done safely */
   }

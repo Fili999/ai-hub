@@ -70,6 +70,23 @@ test('memory: final file is a symlink → addNote never overwrites through it', 
   untouched(s);
 });
 
+test('memory: a dangling symlink planted at the file name between the check and the create never creates the target', (t) => {
+  const s = setup();
+  fs.mkdirSync(path.join(s.root, 'memory', 'lessons'), { recursive: true });
+  const plant = (file) => {
+    if (!linkFile(path.join(s.outside, 'created-by-race.md'), file)) throw new Error('skip');
+  };
+  try {
+    addNote(s.root, lesson, NOW, { beforeOpen: plant });
+  } catch (e) {
+    if (e.message === 'skip') return t.skip('file symlinks need privileges on this Windows');
+    assert.ok(e instanceof MemoryError, e.message); // refused: fine
+  }
+  // either refused or moved to the next free name: in both cases nothing was created behind the link
+  assert.equal(fs.existsSync(path.join(s.outside, 'created-by-race.md')), false);
+  untouched(s);
+});
+
 test('memory: hard link to an outside file is refused for appends', () => {
   const s = setup();
   fs.mkdirSync(path.join(s.root, 'memory', 'lessons'), { recursive: true });
