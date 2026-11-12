@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Builds the downloadable apps. Output goes to dist/. Needs Node >= 18 and internet (it downloads Node once, checks its
+// Builds the downloadable apps. Output goes to dist/. Needs Node >= 22 and internet (it downloads Node once, checks its
 // SHA-256 against the official list, and keeps it in .cache/).
 //   node packaging/build.mjs mac [--arch arm64|x64]   → dist/AI Hub.app and dist/AI-Hub-mac-<apple-silicon|intel>.zip   (run on a Mac)
 //   node packaging/build.mjs win                      → dist/AI-Hub-Setup.exe                                            (needs NSIS "makensis")

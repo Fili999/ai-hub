@@ -1,6 +1,6 @@
 # Security policy
 
-AI Hub installs instructions (skills, agents) that AI tools will follow, and runs a local web interface, so security is a core part of the project. See [docs/security.md](docs/security.md) for the design (approvals by exact hash, optional NVIDIA SkillSpector scan, fail-closed installs, no free-text commands).
+AI Hub installs instructions (skills, agents) that AI tools will follow, and runs a local web interface, so security is a core part of the project. See [docs/security.md](docs/security.md) for the design (and [SECURITY_AUDIT.md](SECURITY_AUDIT.md) for the latest audit, fixes and known limits) (approvals by exact hash, optional NVIDIA SkillSpector scan, fail-closed installs, no free-text commands).
 
 ## Reporting a vulnerability
 

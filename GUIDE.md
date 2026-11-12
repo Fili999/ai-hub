@@ -17,9 +17,9 @@ Today the hub contains **11 skills** and **4 agents**: 15 are yours, 0 come from
 
 ## Installing the Hub on a New Computer
 
-Scripts run on **Node.js** (version 18 or later): if it is missing, the startup script offers to install it. Everything else is installed by reading `dependencies.json`. **Git** is only needed to install skills from GitHub and to sync between computers.
+Scripts run on **Node.js** (version 22 or later): if it is missing, the startup script offers to install it. Everything else is installed by reading `dependencies.json`. **Git** is only needed to install skills from GitHub and to sync between computers.
 
-**Easiest:** download the ready-made bundle from the [Releases page](https://github.com/Fili999/ai-hub/releases/latest): `ai-hub-windows.zip` or `ai-hub-macos.zip`, unzip it and follow `START-HERE.txt`. Minimum requirements: Windows 10/11 (64-bit) or macOS 12+, Node.js 18+ (offered automatically), about 200 MB of free disk space and a modern browser. **Developers:** clone the repository as shown below.
+**Easiest:** download the ready-made bundle from the [Releases page](https://github.com/Fili999/ai-hub/releases/latest): `ai-hub-windows.zip` or `ai-hub-macos.zip`, unzip it and follow `START-HERE.txt`. Minimum requirements: Windows 10/11 (64-bit) or macOS 12+, Node.js 22+ (offered automatically), about 200 MB of free disk space and a modern browser. **Developers:** clone the repository as shown below.
 
 ### Windows
 
@@ -55,7 +55,7 @@ Dependencies are declared in `dependencies.json`. The script constructs commands
 | Antigravity CLI | optional | AI tool: reads skills from ~/.gemini/config/skills and agents from ~/.gemini/config/agents. Install it only if you use it. | — | — |
 | OpenCode (local models) | optional | AI tool for local models (Ollama, LM Studio…) and many providers: reads skills from ~/.agents/skills and agents from ~/.config/opencode/agents. | npm opencode-ai | npm opencode-ai |
 | uv | recommended | Installs Python tools such as NVIDIA SkillSpector (downloads the Python version it needs by itself). | winget astral-sh.uv | brew uv |
-| NVIDIA SkillSpector | recommended | Scans skills and agents downloaded from GitHub for security problems before they are installed (Settings → Security). Apache-2.0. | uv git+https://github.com/NVIDIA/skillspector.git | uv git+https://github.com/NVIDIA/skillspector.git |
+| NVIDIA SkillSpector | recommended | Scans skills and agents downloaded from GitHub for security problems before they are installed (Settings → Security). Apache-2.0. | uv git+https://github.com/NVIDIA/skillspector.git@c7958a3268d9498644b22edb75d0f051bbc8cbfc | uv git+https://github.com/NVIDIA/skillspector.git@c7958a3268d9498644b22edb75d0f051bbc8cbfc |
 | GitHub CLI | optional | Handy for private repositories (gh auth login) and for creating repositories from the terminal. | winget GitHub.cli | brew gh |
 
 If a skill declares `requires-commands: ffmpeg` and `ffmpeg` is missing, `npm run setup` finds it and offers to install it (if listed in the `commandProviders` table of `dependencies.json`; otherwise it flags it).
@@ -284,8 +284,8 @@ All commands are run from the hub directory. This table is read directly from sc
 | `npm run update` | Syncs the hub with GitHub: checks for updates, pulls them (without reinstalling), and pushes your changes. |
 | `npm run shortcut` | Creates a desktop shortcut that opens the hub interface on double click (Windows and Mac). |
 | `npm run setup-hooks` | Enable git hooks: after every "git pull" the link to Claude refreshes automatically. |
-| `npm run package:mac` | Builds the downloadable apps. Output goes to dist/. Needs Node >= 18 and internet (it downloads Node once, checks its |
-| `npm run package:win` | Builds the downloadable apps. Output goes to dist/. Needs Node >= 18 and internet (it downloads Node once, checks its |
+| `npm run package:mac` | Builds the downloadable apps. Output goes to dist/. Needs Node >= 22 and internet (it downloads Node once, checks its |
+| `npm run package:win` | Builds the downloadable apps. Output goes to dist/. Needs Node >= 22 and internet (it downloads Node once, checks its |
 | `npm run test` | Run automated tests (before every commit). |
 
 Before each commit: `npm test`.

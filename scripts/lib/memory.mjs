@@ -1,11 +1,13 @@
 // Hub memory: Markdown notes in memory/, openable as an Obsidian vault and synchronized via GitHub.
 // Only what has future value: decisions, lessons, metrics. Never secrets: every write passes the secret
-// check from repo.mjs plus assignment checks ("password: ..."). Writes only inside memory/, never overwriting.
+// check from repo.mjs plus assignment checks ("password: ..."). Writes only inside memory/, never overwriting,
+// and never through a symlink/junction (also not in intermediate folders): see safefs.mjs.
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseFrontmatter, toList } from './frontmatter.mjs';
 import { listFiles, slugify, toPosix } from './util.mjs';
 import { secretInText } from './repo.mjs';
+import { UnsafePathError, appendFileSafe, createFileExclusive, relParts, safeDir } from './safefs.mjs';
 import { norm, stems } from './text.mjs';
 import { tFor } from './i18n.mjs';
 
@@ -29,6 +31,16 @@ export function memorySecret(text, t = tFor()) {
 }
 
 export class MemoryError extends Error {}
+
+/** Runs a filesystem operation and reports unsafe-path refusals as MemoryError (same type callers already handle). */
+function guarded(fn) {
+  try {
+    return fn();
+  } catch (e) {
+    if (e instanceof UnsafePathError) throw new MemoryError(e.message);
+    throw e;
+  }
+}
 
 const yaml = (s) => JSON.stringify(String(s));
 
@@ -59,19 +71,22 @@ export function renderNote(n, date) {
   return `---\n${fm.join('\n')}\n---\n\n# ${n.title}\n\n${n.body}\n`;
 }
 
-/** Saves a new note in memory/<folder>/<date>-<title>.md. Never overwrites. Returns relative path. */
-export function addNote(root, raw, now = new Date()) {
+/**
+ * Saves a new note in memory/<folder>/<date>-<title>.md. Never overwrites. Returns relative path.
+ * `hooks` is for tests only (simulates a race between the path check and the write).
+ */
+export function addNote(root, raw, now = new Date(), hooks = {}) {
   const t = tFor(root);
   const n = checkNote(raw, t);
   const date = now.toISOString().slice(0, 10);
-  const dir = path.join(root, MEMORY_DIR, TYPES[n.type].folder);
-  fs.mkdirSync(dir, { recursive: true });
+  const folder = TYPES[n.type].folder;
   const base = `${date}-${slugify(n.title).slice(0, 60) || 'note'}`;
   for (let i = 1; i < 100; i++) {
-    const file = path.join(dir, `${base}${i > 1 ? `-${i}` : ''}.md`);
+    const name = `${base}${i > 1 ? `-${i}` : ''}.md`;
     try {
-      fs.writeFileSync(file, renderNote(n, date), { flag: 'wx' });
-      return toPosix(path.relative(root, file));
+      // directories are created one at a time and must be real directories; the file is created with O_EXCL|O_NOFOLLOW
+      guarded(() => createFileExclusive(root, [MEMORY_DIR, folder, name], renderNote(n, date), { hooks, t }));
+      return `${MEMORY_DIR}/${folder}/${name}`;
     } catch (e) {
       if (e.code !== 'EEXIST') throw e;
     }
@@ -79,34 +94,47 @@ export function addNote(root, raw, now = new Date()) {
   throw new MemoryError(t('memory.tooManyNotesSameDay'));
 }
 
-/** Path of an existing note inside memory/ (no "..", no symlinks, .md only). */
-function notePath(root, rel, t = tFor(root)) {
-  const base = path.resolve(root, MEMORY_DIR);
-  const full = path.resolve(root, String(rel ?? ''));
-  if (!full.startsWith(base + path.sep) || !full.endsWith('.md')) throw new MemoryError(t('memory.badAppendPath'));
-  let st;
+/**
+ * Path components of an existing note inside memory/ ([ 'memory', 'lessons', 'x.md' ]): no "..", no absolute
+ * paths, .md only. Symlinks (also in intermediate folders) are refused later, when the file is opened.
+ */
+function notePath(rel, t) {
+  let parts;
   try {
-    st = fs.lstatSync(full);
+    parts = relParts(rel, t);
   } catch {
-    throw new MemoryError(t('memory.noteNotFound', { rel }));
+    throw new MemoryError(t('memory.badAppendPath'));
   }
-  if (!st.isFile()) throw new MemoryError(t('memory.badNotFile'));
-  return full;
+  if (parts[0] !== MEMORY_DIR || parts.length < 2 || !parts.at(-1).endsWith('.md')) throw new MemoryError(t('memory.badAppendPath'));
+  return parts;
 }
 
-/** Appends a dated line at the bottom, without touching the rest. */
-export function appendNote(root, rel, text, now = new Date()) {
+/** Appends a dated line at the bottom, without touching the rest. Never follows symlinks. */
+export function appendNote(root, rel, text, now = new Date(), hooks = {}) {
   const t = tFor(root);
-  const full = notePath(root, rel, t);
+  const parts = notePath(rel, t);
   const textStr = String(text ?? '').replace(/\r\n/g, '\n').trim();
   if (!textStr) throw new MemoryError(t('memory.badAppendText'));
-  const current = fs.readFileSync(full, 'utf8');
-  if (current.length + textStr.length > BODY_MAX * 2) throw new MemoryError(t('memory.badAppendTooLong'));
   const why = memorySecret(textStr, t);
   if (why) throw new MemoryError(t('memory.secretRejectedAppend', { why }));
-  const head = current.includes('\n## Updates\n') ? '' : '\n## Updates\n';
-  fs.appendFileSync(full, `${current.endsWith('\n') ? '' : '\n'}${head}\n- ${now.toISOString().slice(0, 10)}: ${textStr.replace(/\n+/g, ' ')}\n`);
-  return toPosix(path.relative(root, full));
+  try {
+    guarded(() =>
+      appendFileSafe(
+        root,
+        parts,
+        (current) => {
+          if (current.length + textStr.length > BODY_MAX * 2) throw new MemoryError(t('memory.badAppendTooLong'));
+          const head = current.includes('\n## Updates\n') ? '' : '\n## Updates\n';
+          return `${current.endsWith('\n') ? '' : '\n'}${head}\n- ${now.toISOString().slice(0, 10)}: ${textStr.replace(/\n+/g, ' ')}\n`;
+        },
+        { hooks, t },
+      ),
+    );
+  } catch (e) {
+    if (e.code === 'ENOENT') throw new MemoryError(t('memory.noteNotFound', { rel }));
+    throw e;
+  }
+  return parts.join('/');
 }
 
 /** All readable notes: {file, type, title, date, tags, project, body}. Invalid notes are reported separately. */
@@ -116,6 +144,12 @@ export function readNotes(root) {
   if (!fs.existsSync(dir)) return { notes: [], problems: [] };
   const notes = [];
   const problems = [];
+  // memory/ itself must be a real folder: a link to somewhere else would pull outside files into the search
+  try {
+    safeDir(root, [MEMORY_DIR], { t });
+  } catch {
+    return { notes, problems: [{ level: 'error', file: MEMORY_DIR, message: t('memory.problemUnsafeDir') }] };
+  }
   for (const rel of listFiles(dir, { maxDepth: 4, maxFiles: 5000 }).filter((f) => f.endsWith('.md') && !f.startsWith('.obsidian/'))) {
     const file = `${MEMORY_DIR}/${rel}`;
     let text;

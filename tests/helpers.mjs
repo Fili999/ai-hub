@@ -95,3 +95,32 @@ export function run(script, args, { root, env = {} } = {}) {
   });
   return { code: r.status, out: r.stdout, err: r.stderr };
 }
+
+/** Directory link that works everywhere: a junction on Windows (no admin rights needed), a symlink elsewhere. */
+export function linkDir(target, linkPath) {
+  fs.symlinkSync(target, linkPath, process.platform === 'win32' ? 'junction' : 'dir');
+}
+
+/** File symlink; null when the platform refuses it without privileges (Windows), so the test can skip. */
+export function linkFile(target, linkPath) {
+  try {
+    fs.symlinkSync(target, linkPath, 'file');
+    return true;
+  } catch (e) {
+    if (process.platform === 'win32' && ['EPERM', 'EACCES'].includes(e.code)) return false;
+    throw e;
+  }
+}
+
+/** Every file below `dir` with its exact bytes: used to prove that nothing outside the hub was created or changed. */
+export function snapshotTree(dir) {
+  const out = {};
+  (function walk(d) {
+    for (const ent of fs.readdirSync(d, { withFileTypes: true })) {
+      const full = path.join(d, ent.name);
+      if (ent.isDirectory()) walk(full);
+      else out[path.relative(dir, full)] = fs.readFileSync(full, 'utf8');
+    }
+  })(dir);
+  return out;
+}

@@ -5,7 +5,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { platformLabel } from './machine.mjs';
-import { hashPath, readJson, toPosix } from './util.mjs';
+import { commandPath, hashPath, readJson, toPosix } from './util.mjs';
 import { tFor } from './i18n.mjs';
 
 const t = tFor();
@@ -146,7 +146,7 @@ export function git(root, args, { timeout = 30000, interactive = false } = {}) {
     let child;
     try {
       // outside Windows git runs in its own process group: kills children on timeout
-      child = spawn('git', ['-C', root, '-c', 'core.quotepath=false', ...args], { env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true, detached: process.platform !== 'win32' });
+      child = spawn(commandPath('git') ?? 'git', ['-C', root, '-c', 'core.quotepath=false', ...args], { env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true, detached: process.platform !== 'win32' });
     } catch (e) {
       notFound = e.code === 'ENOENT';
       err = e.message;

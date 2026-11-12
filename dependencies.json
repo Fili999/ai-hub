@@ -11,7 +11,7 @@
         "args": [
           "--version"
         ],
-        "minVersion": "18"
+        "minVersion": "22"
       },
       "install": {
         "win32": {
@@ -178,17 +178,17 @@
       "install": {
         "win32": {
           "manager": "uv",
-          "package": "git+https://github.com/NVIDIA/skillspector.git",
+          "package": "git+https://github.com/NVIDIA/skillspector.git@c7958a3268d9498644b22edb75d0f051bbc8cbfc",
           "python": "3.12"
         },
         "darwin": {
           "manager": "uv",
-          "package": "git+https://github.com/NVIDIA/skillspector.git",
+          "package": "git+https://github.com/NVIDIA/skillspector.git@c7958a3268d9498644b22edb75d0f051bbc8cbfc",
           "python": "3.12"
         },
         "linux": {
           "manager": "uv",
-          "package": "git+https://github.com/NVIDIA/skillspector.git",
+          "package": "git+https://github.com/NVIDIA/skillspector.git@c7958a3268d9498644b22edb75d0f051bbc8cbfc",
           "python": "3.12"
         }
       },

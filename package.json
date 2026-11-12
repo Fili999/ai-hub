@@ -1,6 +1,6 @@
 {
   "name": "ai-hub",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "Open-source hub of skills, agents, workflows and teams for Claude Code, Codex, Antigravity CLI and local models. Configure it your way.",
   "license": "MIT",
@@ -28,7 +28,7 @@
   ],
   "type": "module",
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "scripts": {
     "start": "node ui/server.mjs",
@@ -52,6 +52,6 @@
     "setup-hooks": "git config core.hooksPath .githooks",
     "package:mac": "node packaging/build.mjs mac",
     "package:win": "node packaging/build.mjs win",
-    "test": "node --test tests/hub.test.mjs tests/pure.test.mjs tests/ui.test.mjs tests/setup.test.mjs tests/guide.test.mjs tests/repo.test.mjs tests/create.test.mjs tests/settings.test.mjs tests/approval.test.mjs tests/skills.test.mjs tests/routing.test.mjs tests/usage.test.mjs tests/memory.test.mjs tests/evaluation.test.mjs tests/teams.test.mjs tests/providers.test.mjs tests/english-output.test.mjs tests/app.test.mjs"
+    "test": "node --test tests/hub.test.mjs tests/pure.test.mjs tests/ui.test.mjs tests/setup.test.mjs tests/guide.test.mjs tests/repo.test.mjs tests/create.test.mjs tests/settings.test.mjs tests/approval.test.mjs tests/skills.test.mjs tests/routing.test.mjs tests/usage.test.mjs tests/memory.test.mjs tests/evaluation.test.mjs tests/teams.test.mjs tests/providers.test.mjs tests/english-output.test.mjs tests/app.test.mjs tests/security-spector.test.mjs tests/security-memory.test.mjs tests/security-install.test.mjs tests/security-fs.test.mjs tests/security-server.test.mjs tests/security-commands.test.mjs tests/security-skills.test.mjs"
   }
 }

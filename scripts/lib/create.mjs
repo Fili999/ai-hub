@@ -12,6 +12,7 @@ import { refreshGuideSafe } from './guide.mjs';
 import { commandExists, readJson, toPosix } from './util.mjs';
 import { EFFORT_TIERS, MODEL_TIERS, PROVIDER_IDS, loadProviders } from './providers.mjs';
 import { readSettings } from './settings.mjs';
+import { UnsafePathError, createFileExclusive } from './safefs.mjs';
 import { hubLanguage, tFor } from './i18n.mjs';
 
 const t = tFor();
@@ -527,25 +528,15 @@ export function createItem(root, raw) {
   const dirAbs = path.resolve(root, ...dirRel.split('/'));
   if (!fileAbs.startsWith(baseAbs + path.sep) || !dirAbs.startsWith(baseAbs)) throw new HubError(t('create.error.pathNotAllowed'), 400);
 
-  // no symlinks along the path: never write "through" a link
-  let probe = baseAbs;
-  for (const seg of path.relative(baseAbs, path.dirname(fileAbs)).split(path.sep).filter(Boolean)) {
-    probe = path.join(probe, seg);
-    let st = null;
-    try {
-      st = fs.lstatSync(probe);
-    } catch {
-      break;
-    }
-    if (st.isSymbolicLink()) throw new HubError(t('create.error.isSymlink', { segment: seg }), 400);
-  }
-
+  // The new file is created through safefs: every folder from the hub root down is checked (never a symlink or
+  // junction, also not `skills/` or `skills/own` themselves), the file is opened with O_EXCL|O_NOFOLLOW and the
+  // result is verified, so nothing is written "through" a link even if one appears while we work.
   const toClean = firstMissing(path.dirname(fileAbs), baseAbs);
   try {
-    fs.mkdirSync(path.dirname(fileAbs), { recursive: true });
-    fs.writeFileSync(fileAbs, prev.markdown, { flag: 'wx' }); // "wx": if file exists, fails instead of overwriting
+    createFileExclusive(root, fileRel.split('/'), prev.markdown, { t });
   } catch (e) {
     if (toClean) fs.rmSync(toClean, { recursive: true, force: true });
+    if (e instanceof UnsafePathError) throw new HubError(e.message, 400);
     if (e.code === 'EEXIST') throw new HubError(t('create.error.fileExistsNoOverwrite', { path: fileRel }), 409);
     throw new HubError(t('create.error.cannotWriteFile', { error: e.message }), 500);
   }

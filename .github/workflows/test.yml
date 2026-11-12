@@ -1,5 +1,5 @@
 # Automatic tests on every push and pull request: checks that the hub really works on Linux, Windows and macOS.
-# Light matrix: Linux with Node 18 and 22, Windows and macOS with Node 22.
+# Light matrix: Linux with Node 22 and 24, Windows and macOS with Node 22.
 name: test
 
 # Only on main and on pull requests (plus manual runs): a branch that is already in a pull request does not run twice.
@@ -25,13 +25,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-latest, node: 18 }
+          - { os: ubuntu-latest, node: 24 }
           - { os: ubuntu-latest, node: 22 }
           - { os: windows-latest, node: 22 }
           - { os: macos-latest, node: 22 }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ matrix.node }}
       - name: Git identity for the tests (local throwaway repositories)

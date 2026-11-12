@@ -87,11 +87,30 @@ export function fingerprint(root = HUB_ROOT) {
 // ---------- risk analysis ----------
 
 const SCRIPT_RE = /\.(sh|bash|zsh|py|js|mjs|cjs|ts|ps1|bat|cmd|rb|pl)$/i;
+const TEXT_SCAN_RE = /\.(md|markdown|txt|json|ya?ml|toml|html?)$/i;
+const BINARY_RE = /\.(exe|dll|so|dylib|bin|wasm|node|jar|class|pyc|msi|dmg|app|pkg|deb|rpm|apk|o|a)$/i;
+// Invisible characters are a known way to hide instructions from a human reviewer while a model still reads them:
+// zero-width (200B-200F, 2060-2064), bidi controls (202A-202E, 2066-2069), line/paragraph separators and Unicode "tag" characters.
+const HIDDEN_UNICODE = /[\u200B-\u200F\u2028-\u202E\u2060-\u2064\u2066-\u2069\u206A-\u206F]|[\u{E0000}-\u{E007F}]/u;
+const SCAN_MAX_FILES = 120;
+const SCAN_MAX_BYTES = 400_000;
+
+// These are heuristics for a first look, NOT a security boundary: a skill that passes them can still be harmful,
+// and a flagged one can be harmless. Skills are untrusted instructions whatever their flags (docs/security.md).
 const RISK_PATTERNS = [
   { flag: 'pipe-to-shell', high: true, re: /(curl|wget|iwr|Invoke-WebRequest)[^\n|]*\|\s*(sudo\s+)?(ba|z|da)?sh\b|\|\s*iex\b/i },
-  { flag: 'destructive-cmd', high: true, re: /\brm\s+-[a-z]*r[a-z]*f|\brm\s+-[a-z]*f[a-z]*r|Remove-Item[^\n]*-Recurse|\bmkfs\b|\bdd\s+if=/i },
+  { flag: 'destructive-cmd', high: true, re: /\brm\s+-[a-z]*r[a-z]*f|\brm\s+-[a-z]*f[a-z]*r|Remove-Item[^\n]*-Recurse|\bmkfs\b|\bdd\s+if=|\bgit\s+(push\s+[^\n]*--force|reset\s+--hard|clean\s+-[a-z]*f)|\bformat\s+[a-z]:|\bshred\b/i },
   { flag: 'privileged', high: true, re: /\bsudo\b|\bchmod\s+(-R\s+)?777\b/i },
-  { flag: 'reads-secrets', high: true, re: /\.ssh\/|\.aws\/credentials|id_rsa/i },
+  { flag: 'reads-secrets', high: true, re: /\.ssh\/|\.aws\/credentials|id_rsa|\.netrc|\.git-credentials|\.npmrc|\.kube\/config|\.docker\/config\.json|credentials\.json|security\s+find-generic-password|gh\s+auth\s+token|\bkeychain\b/i },
+  // .env files and API keys / tokens read from the environment
+  { flag: 'reads-env-secrets', high: true, re: /(^|[\s"'`(/\\=<>])\.env(\.[\w.-]+)?(?![\w-])|\bprintenv\b|\bos\.environ\b|process\.env\b[^\n]*(KEY|TOKEN|SECRET|PASSWORD)|\$\{?[A-Z0-9_]*(API_KEY|SECRET|TOKEN|PASSWORD)\b/i },
+  // sends data somewhere: upload flags, netcat, paste/webhook services
+  { flag: 'exfiltration', high: true, re: /\b(curl|wget)\b[^\n]*(\s-d\b|--data|--data-binary|\s-F\b|--form|\s-T\b|--upload-file|-X\s*(POST|PUT))|\b(nc|ncat|netcat)\s+\S+\s+\d+|webhook\.site|requestbin|pastebin\.com|transfer\.sh|discord(app)?\.com\/api\/webhooks|hooks\.slack\.com|ngrok\.|\|\s*(curl|nc)\b/i },
+  // changes the rules the agent runs under: permissions, hooks, other instruction files, the hub's own scanner policy
+  { flag: 'edits-security-config', high: true, re: /dangerously-skip-permissions|bypassPermissions|disableAllHooks|enableAllProjectMcpServers|\.claude\/settings(\.local)?\.json|settings\.local\.json|core\.hooksPath|\.git\/hooks|\.githooks|--no-verify|security\.skillspector|permissions\.(allow|deny)|(append|add|write|overwrite|replace|edit|modify)[^\n]{0,40}\b(CLAUDE\.md|AGENTS\.md|GEMINI\.md)/i },
+  // instructions aimed at the model itself rather than at the task
+  { flag: 'prompt-injection', high: true, re: /ignore\s+(all\s+|any\s+)?(the\s+)?(previous|prior|above|earlier|system)\s+(instructions|rules|prompts?|messages?)|disregard\s+(all\s+|any\s+)?(the\s+)?(previous|prior|above|system)|(do\s+not|don'?t|never)\s+(tell|inform|mention|reveal|show|notify)[^\n]{0,40}\b(the\s+)?user|without\s+(telling|informing|asking|notifying|alerting)[^\n]{0,30}\b(the\s+)?user|you\s+are\s+now\s+(in\s+)?(developer|dan|unrestricted|jailbroken)|(secretly|silently|quietly|covertly|stealthily)[^\n]{0,40}(send|upload|post|exfiltrat|run|execute|install|delete)|do\s+not\s+ask\s+(for\s+)?(permission|confirmation|approval)|skip\s+(the\s+)?(confirmation|approval|permission)/i },
+  { flag: 'obfuscated-exec', high: true, re: /base64\s+(-d|--decode)[^\n]*\|\s*(ba|z)?sh|(atob|Buffer\.from)\([^)]*\)[^\n]*\beval\b|\beval\s*\(\s*(atob|Buffer\.from)|FromBase64String[^\n]*(iex|Invoke-Expression)|python\d?\s+-c\s+["'][^\n]*(base64|exec\()|\bexec\s*\(\s*(compile|base64)/i },
   { flag: 'network-fetch', high: false, re: /\b(curl|wget)\s|\bfetch\(|requests\.(get|post)|Invoke-WebRequest|\biwr\s/i },
 ];
 
@@ -103,34 +122,44 @@ export function analyzeRisk(target, { external = false, tools = null, isAgent = 
   if (fs.statSync(target).isFile()) {
     base = path.dirname(target);
     files = [path.basename(target)];
-  } else files = listFiles(target, { maxDepth: 3, maxFiles: 200 });
+  } else files = listFiles(target, { maxDepth: 40, maxFiles: 2000 });
 
   const scripts = files.filter((f) => SCRIPT_RE.test(f));
   const hasScripts = scripts.length > 0;
   if (hasScripts) flags.add('has-scripts');
+  if (files.some((f) => BINARY_RE.test(f))) flags.add('has-binaries');
 
-  const toScan = files.filter((f) => /\.md$/i.test(f) || SCRIPT_RE.test(f)).slice(0, 40);
-  for (const f of toScan) {
+  // what is worth reading: instructions and scripts. Anything that could not be read is reported, never ignored:
+  // a payload hidden in a large or deeply nested file must not make a skill look clean.
+  const candidates = files.filter((f) => TEXT_SCAN_RE.test(f) || SCRIPT_RE.test(f));
+  let unscanned = candidates.length > SCAN_MAX_FILES || files.length >= 2000;
+  for (const f of candidates.slice(0, SCAN_MAX_FILES)) {
     let text = '';
     try {
       const full = path.join(base, f);
-      if (fs.statSync(full).size > 200_000) continue;
+      if (fs.statSync(full).size > SCAN_MAX_BYTES) {
+        unscanned = true;
+        continue;
+      }
       text = fs.readFileSync(full, 'utf8');
     } catch {
+      unscanned = true;
       continue;
     }
     for (const p of RISK_PATTERNS) if (p.re.test(text)) flags.add(p.flag);
+    if (HIDDEN_UNICODE.test(text.replace(/^\uFEFF/, ''))) flags.add('hidden-unicode');
   }
+  if (unscanned) flags.add('unscanned-content');
 
   const toolList = tools ?? [];
   if (toolList.some((t) => /^(Bash|PowerShell|Shell)\b/i.test(t))) flags.add('uses-shell');
   if (isAgent && tools === null) flags.add('all-tools');
   if (external) flags.add('external');
 
-  const highFlag = RISK_PATTERNS.some((p) => p.high && flags.has(p.flag));
+  const highFlag = [...RISK_PATTERNS.filter((p) => p.high).map((p) => p.flag), 'hidden-unicode'].some((f) => flags.has(f));
   let risk = 'low';
   if (highFlag) risk = external ? 'high' : 'medium';
-  else if (external && ['has-scripts', 'uses-shell', 'network-fetch', 'all-tools'].some((f) => flags.has(f))) risk = 'medium';
+  else if (external && ['has-scripts', 'has-binaries', 'unscanned-content', 'uses-shell', 'network-fetch', 'all-tools'].some((f) => flags.has(f))) risk = 'medium';
   return { flags: [...flags].sort(), risk, hasScripts };
 }
 

@@ -1,4 +1,4 @@
-// Shared utilities for all scripts. No external dependencies (Node >= 18 only).
+// Shared utilities for all scripts. No external dependencies (Node >= 22 only).
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -24,9 +24,20 @@ export function readJson(file, fallback) {
   }
 }
 
+/**
+ * Writes JSON atomically: to a temporary file next to the target, then renamed over it. A crash never leaves a
+ * half-written file, and a symlink planted at `file` is replaced instead of being written through.
+ */
 export function writeJson(file, data) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, JSON.stringify(data, null, 2) + '\n');
+  const tmp = `${file}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`;
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2) + '\n', { flag: 'wx' });
+    fs.renameSync(tmp, file);
+  } catch (e) {
+    fs.rmSync(tmp, { force: true });
+    throw e;
+  }
 }
 
 /** Minimal argument parser: --key value, --key=value, --flag, positional args. */
@@ -115,7 +126,8 @@ export function commandPath(cmd, env = process.env) {
   const exts = process.platform === 'win32' ? (env.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';') : [''];
   const look = (dirs) => {
     for (const dir of dirs) {
-      if (!dir) continue;
+      // a relative entry ("", ".", "bin") would resolve against the current folder: never trust it
+      if (!dir || !path.isAbsolute(dir)) continue;
       for (const ext of exts) {
         const f = path.join(dir, cmd + ext);
         if (isRunnable(f)) return f;

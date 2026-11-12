@@ -4,10 +4,12 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseFrontmatter, toList } from './frontmatter.mjs';
-import { hashPath, isSafeName, toPosix } from './util.mjs';
+import { commandPath, hashPath, isSafeName, toPosix } from './util.mjs';
 import { tFor } from './i18n.mjs';
 
 const t = tFor();
+
+const CLONE_TIMEOUT_MS = 10 * 60 * 1000;
 
 function cleanSub(sub) {
   const s = String(sub ?? '').replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
@@ -69,22 +71,26 @@ export function parseSource(input, { ref, path: subpath } = {}) {
 /** Clones (shallow) into destDir and returns commit SHA. */
 export function cloneSource(src, destDir) {
   const env = { ...process.env, GIT_TERMINAL_PROMPT: '0' };
-  const git = (args) => spawnSync('git', args, { encoding: 'utf8', env });
+  // absolute path of git when found in PATH (never a relative PATH entry), no shell, bounded time and output
+  const gitExe = commandPath('git') ?? 'git';
+  const git = (args) => spawnSync(gitExe, args, { encoding: 'utf8', env, timeout: CLONE_TIMEOUT_MS, maxBuffer: 16 * 1024 * 1024, windowsHide: true });
   const isSha = src.ref && /^[0-9a-f]{7,40}$/i.test(src.ref);
   // core.autocrlf=false: files arrive as they are in the repository, without newline conversions on this machine
-  const args = ['-c', 'protocol.ext.allow=never', '-c', 'core.autocrlf=false', 'clone', '--quiet'];
+  // only https (GitHub) and, for a local folder given on purpose, file: every other transport (ext::, ssh, git, http) is off
+  const args = ['-c', 'protocol.allow=never', '-c', 'protocol.https.allow=always', ...(src.type === 'local' ? ['-c', 'protocol.file.allow=always'] : []), '-c', 'protocol.ext.allow=never', '-c', 'core.autocrlf=false', 'clone', '--quiet', '--no-recurse-submodules'];
   if (!isSha) args.push('--depth', '1');
   if (src.ref && !isSha) args.push('--branch', src.ref);
   args.push('--', src.url, destDir);
 
   let r = git(args);
   if (r.error?.code === 'ENOENT') throw new Error(t('source.error.noGit'));
+  if (r.error?.code === 'ETIMEDOUT') throw new Error(t('source.error.cloneTimedOut', { display: src.display }));
   if (r.status !== 0) {
     const last = (r.stderr || '').trim().split('\n').pop();
     throw new Error(t('source.error.cloneFailed', { display: src.display, last }));
   }
   if (isSha) {
-    r = git(['-C', destDir, 'checkout', '--quiet', src.ref]);
+    r = git(['-C', destDir, 'checkout', '--quiet', src.ref, '--']);
     if (r.status !== 0) throw new Error(t('source.error.commitNotFound', { ref: src.ref, display: src.display }));
   }
   const head = git(['-C', destDir, 'rev-parse', 'HEAD']);

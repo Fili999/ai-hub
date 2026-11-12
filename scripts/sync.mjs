@@ -19,6 +19,7 @@ import { verifyEntry } from './lib/approval.mjs';
 import { parseFrontmatter } from './lib/frontmatter.mjs';
 import { convertAgent, loadProviders, providerPaths } from './lib/providers.mjs';
 import { readSettings } from './lib/settings.mjs';
+import { isInside } from './lib/safefs.mjs';
 import { tFor } from './lib/i18n.mjs';
 
 const t = tFor(HUB_ROOT);
@@ -137,7 +138,11 @@ for (const e of [...index.skills, ...index.agents]) {
 const infoOf = (p) => path.join(p.paths.home, 'ai-hub.json');
 const prevEntries = new Map(); // dest → previous entry (any tool)
 for (const p of [...targets, ...disabled]) for (const e of readJson(infoOf(p), { entries: [] }).entries ?? []) prevEntries.set(e.dest, e);
-const isManaged = (dest) => prevEntries.has(dest) || (lstat(dest)?.isSymbolicLink() && pointsIntoHub(dest));
+// ai-hub.json lives in the tool's folder and is only data: an entry whose destination is outside the tool's own
+// skills/agents folders (edited by hand, or damaged) must never lead to deleting or replacing that path.
+const toolDirs = [...targets, ...disabled].flatMap((p) => [p.paths.skillsDir, p.paths.agentsDir]).filter(Boolean).map((d) => path.resolve(d));
+const inToolDir = (dest) => typeof dest === 'string' && toolDirs.some((d) => isInside(d, path.resolve(dest)));
+const isManaged = (dest) => inToolDir(dest) && (prevEntries.has(dest) || (lstat(dest)?.isSymbolicLink() && pointsIntoHub(dest)));
 
 // ---- apply, tool by tool; a destination shared by several tools (~/.agents/skills) is handled once
 const done = new Map(); // dest → entry
@@ -196,6 +201,10 @@ const pruned = [];
 if (!flags['no-prune']) {
   for (const old of prevEntries.values()) {
     if (done.has(old.dest)) continue;
+    if (lstat(old.dest) && !inToolDir(old.dest)) {
+      skipped.push(t('sync.skipOutside', { dest: String(old.dest) }));
+      continue;
+    }
     if (lstat(old.dest) && isManaged(old.dest)) {
       if (!dry) removeManaged(old.dest);
       pruned.push(`${old.kind}:${old.name}`);
