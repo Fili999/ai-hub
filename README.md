@@ -29,7 +29,7 @@ AI coding tools are only as good as the instructions you give them. **AI Hub** i
 - 🔒 **Safe by default.** Skills from GitHub are scanned (optional NVIDIA SkillSpector), approved against the exact hash of their files, and never edited by hand. Commands are never free text.
 - 🧩 **Yours to shape.** Your own roles, agents, skills, teams, categories, models, languages and security level — all configurable, from a guided setup or in the interface.
 
-> **Local and private.** Everything runs on your computer. No account, no cloud service, no telemetry. The web interface listens on `127.0.0.1` only.
+> **Local and private.** Everything runs on your computer. No account, no cloud service, no telemetry. The only automatic request is a once-a-day check for a new version on GitHub: it carries nothing about you or your files, and you can turn it off in Settings → Updates. The web interface listens on `127.0.0.1` only.
 
 ## Download
 
