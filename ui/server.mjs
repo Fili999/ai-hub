@@ -45,6 +45,7 @@ const MAX_BODY = 256 * 1024;
 const MAX_OUTPUT = 200 * 1024;
 // preview of a repo with hundreds of skills is JSON of several hundred KB: do not truncate
 const MAX_PREVIEW_OUTPUT = 32 * 1024 * 1024;
+const MAX_EVENT_CLIENTS = 16; // a few tabs; beyond this the stream is refused so open connections cannot pile up
 const MAX_SCAN_ITEMS = 20;
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -571,7 +572,12 @@ export async function startServer({ root = HUB_ROOT, port = 4173, strictPort = f
   }
 
   function serveStatic(req, res, pathname) {
-    let rel = pathname === '/' ? 'index.html' : decodeURIComponent(pathname).replace(/^\/+/, '');
+    let rel;
+    try {
+      rel = pathname === '/' ? 'index.html' : decodeURIComponent(pathname).replace(/^\/+/, '');
+    } catch {
+      return sendJson(res, 400, { error: tr('server.badBody') });
+    }
     const file = path.resolve(PUBLIC, rel);
     if (file !== PUBLIC && !file.startsWith(PUBLIC + path.sep)) return sendJson(res, 403, { error: 'Forbidden.' });
     let real;
@@ -608,12 +614,22 @@ export async function startServer({ root = HUB_ROOT, port = 4173, strictPort = f
         return serveStatic(req, res, pathname);
       }
 
-      // real-time events (EventSource cannot send headers: token passes in URL)
-      const given = req.headers['x-hub-token'] ?? url.searchParams.get('t') ?? '';
-      const okToken = given.length === token.length && crypto.timingSafeEqual(Buffer.from(given), Buffer.from(token));
+      // Cross-site protection for every API route (reads too): browsers label cross-site requests and add Origin
+      // to cross-origin ones. The page of this server is "same-origin"; nothing legitimate is refused here.
+      const site = req.headers['sec-fetch-site'];
+      if (pathname !== '/api/health' && ((site && site !== 'same-origin' && site !== 'none') || (req.headers.origin !== undefined && !origins.has(req.headers.origin)))) return sendJson(res, 403, { error: tr('server.badOrigin') });
+
+      // real-time events (EventSource cannot send headers: only that route may take the token from the URL,
+      // everywhere else a token in a URL would end up in history and logs)
+      const header = req.headers['x-hub-token'];
+      const given = typeof header === 'string' ? header : pathname === '/api/events' ? (url.searchParams.get('t') ?? '') : '';
+      const a = Buffer.from(given);
+      const b = Buffer.from(token);
+      const okToken = a.length === b.length && crypto.timingSafeEqual(a, b);
       if (pathname !== '/api/health' && !okToken) return sendJson(res, 401, { error: 'Session token missing or invalid: reload the page.' });
 
       if (pathname === '/api/events' && req.method === 'GET') {
+        if (clients.size >= MAX_EVENT_CLIENTS) return sendJson(res, 429, { error: 'Too many open event streams.' });
         res.writeHead(200, headers({ 'Content-Type': 'text/event-stream; charset=utf-8', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' }));
         res.write(`retry: 3000\nevent: hello\ndata: {}\n\n`);
         clients.add(res);
@@ -628,7 +644,8 @@ export async function startServer({ root = HUB_ROOT, port = 4173, strictPort = f
       if (req.method === 'POST') {
         // CSRF: only pages served by this server may modify state
         if (!origins.has(req.headers.origin ?? '')) return sendJson(res, 403, { error: tr('server.badOrigin') });
-        if (!/^application\/json\b/i.test(req.headers['content-type'] ?? '')) return sendJson(res, 415, { error: 'Requires Content-Type: application/json.' });
+        // exactly application/json (a charset parameter is fine): look-alikes such as application/json-patch+json are not
+        if (String(req.headers['content-type'] ?? '').split(';')[0].trim().toLowerCase() !== 'application/json') return sendJson(res, 415, { error: 'Requires Content-Type: application/json.' });
         // creation routes accept long text (a complex skill can be a large Markdown file)
         body = await readBody(req, pathname.startsWith('/api/create') ? BODY_MAX : MAX_BODY);
       }
@@ -645,6 +662,7 @@ export async function startServer({ root = HUB_ROOT, port = 4173, strictPort = f
   // "fetch failed" race conditions when the server closes them right as a request arrives.
   server.keepAliveTimeout = 65000;
   server.headersTimeout = 66000;
+  server.requestTimeout = 60000; // receiving a request (headers + body) never takes a minute on loopback
 
   // ---------------------------------------------------------------- startup
   const listen = (p) =>

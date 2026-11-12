@@ -91,10 +91,11 @@ test('repo settings.json is valid and analysis is active in block mode', () => {
 
 // ------------------------------------------------------------------ SkillSpector
 test('skillspector: policy verdict, mock scanner, errors treated as unsafe', () => {
-  assert.equal(verdict({ ok: true, recommendation: 'SAFE' }, 'block'), 'pass');
-  assert.equal(verdict({ ok: true, recommendation: 'CAUTION' }, 'block'), 'warn');
-  assert.equal(verdict({ ok: true, recommendation: 'DO_NOT_INSTALL' }, 'block'), 'block');
-  assert.equal(verdict({ ok: true, recommendation: 'DO_NOT_INSTALL' }, 'warn'), 'warn');
+  assert.equal(verdict({ ok: true, complete: true, recommendation: 'SAFE' }, 'block'), 'pass');
+  assert.equal(verdict({ ok: true, complete: false, recommendation: 'SAFE' }, 'block'), 'block', 'an incomplete scan is never safe');
+  assert.equal(verdict({ ok: true, complete: true, recommendation: 'CAUTION' }, 'block'), 'warn');
+  assert.equal(verdict({ ok: true, complete: true, recommendation: 'DO_NOT_INSTALL' }, 'block'), 'block');
+  assert.equal(verdict({ ok: true, complete: true, recommendation: 'DO_NOT_INSTALL' }, 'warn'), 'warn');
   assert.equal(verdict({ ok: false, error: 'x' }, 'block'), 'block', 'fail-closed');
   assert.equal(verdict({ ok: false, error: 'x' }, 'warn'), 'warn');
   assert.equal(verdict({ ok: true, recommendation: 'DO_NOT_INSTALL' }, 'off'), 'pass');

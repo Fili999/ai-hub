@@ -156,7 +156,7 @@ test('items installed before approvals: review pending, approvable with --approv
   fs.writeFileSync(fake, `import fs from 'node:fs'; import path from 'node:path';
 const a = process.argv.slice(2); if (a[0] === '--version') { console.log('SkillSpector v1.0.0'); process.exit(0); }
 const t = fs.readFileSync(path.join(a[1], 'SKILL.md'), 'utf8'); const bad = t.includes('MALICIOUS');
-console.log(JSON.stringify({ risk_assessment: { score: bad ? 90 : 0, severity: bad ? 'CRITICAL' : 'LOW', recommendation: bad ? 'DO_NOT_INSTALL' : 'SAFE' }, issues: [] })); process.exit(bad ? 1 : 0);`);
+console.log(JSON.stringify({ risk_assessment: { score: bad ? 90 : 0, severity: bad ? 'CRITICAL' : 'LOW', recommendation: bad ? 'DO_NOT_INSTALL' : 'SAFE' }, issues: [], analysis_completeness: { is_complete: true }, execution_successful: true })); process.exit(bad ? 1 : 0);`);
   write(root, 'settings.json', '{"version":1,"security":{"skillspector":"block"}}');
   const env = { AI_HUB_SKILLSPECTOR_SCRIPT: fake };
   r = run('install.mjs', ['--approve', 'old', '--via=ui'], { root, env });

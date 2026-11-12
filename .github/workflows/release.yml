@@ -21,8 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
       - name: Git identity for the tests
@@ -36,7 +36,7 @@ jobs:
       - run: npm test
       - name: Build the bundles
         run: .github/scripts/package.sh dist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: bundles
           path: dist/*
@@ -51,8 +51,8 @@ jobs:
       matrix:
         arch: [arm64, x64]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
       - run: node packaging/build.mjs mac --arch ${{ matrix.arch }}
@@ -66,7 +66,7 @@ jobs:
           URL=$(node -p "require('$AI_HUB_HOME/.tmp/app.json').url")
           curl -fsS "${URL}api/health" | grep ai-hub-ui
           "$R/node/bin/node" "$R/hub/scripts/app-launcher.mjs" --stop
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: mac-${{ matrix.arch }}
           path: dist/AI-Hub-mac-*.zip
@@ -77,8 +77,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
       - name: NSIS (installer compiler)
@@ -96,7 +96,7 @@ jobs:
           URL=$(node -p "require(process.argv[1]).url" "$(cygpath -m "$AI_HUB_HOME/.tmp/app.json")")
           curl -fsS "${URL}api/health" | grep ai-hub-ui
           "$N" "$L" --stop
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: windows
           path: dist/AI-Hub-Setup.exe
@@ -110,7 +110,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: assets
           merge-multiple: true

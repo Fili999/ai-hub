@@ -18,9 +18,9 @@ This guide updates automatically: numbers, lists, and tables below are read dire
 
 ## Installing the Hub on a New Computer
 
-Scripts run on **Node.js** (version 18 or later): if it is missing, the startup script offers to install it. Everything else is installed by reading `dependencies.json`. **Git** is only needed to install skills from GitHub and to sync between computers.
+Scripts run on **Node.js** (version 22 or later): if it is missing, the startup script offers to install it. Everything else is installed by reading `dependencies.json`. **Git** is only needed to install skills from GitHub and to sync between computers.
 
-**Easiest:** download the ready-made bundle from the [Releases page](https://github.com/Fili999/ai-hub/releases/latest): `ai-hub-windows.zip` or `ai-hub-macos.zip`, unzip it and follow `START-HERE.txt`. Minimum requirements: Windows 10/11 (64-bit) or macOS 12+, Node.js 18+ (offered automatically), about 200 MB of free disk space and a modern browser. **Developers:** clone the repository as shown below.
+**Easiest:** download the ready-made bundle from the [Releases page](https://github.com/Fili999/ai-hub/releases/latest): `ai-hub-windows.zip` or `ai-hub-macos.zip`, unzip it and follow `START-HERE.txt`. Minimum requirements: Windows 10/11 (64-bit) or macOS 12+, Node.js 22+ (offered automatically), about 200 MB of free disk space and a modern browser. **Developers:** clone the repository as shown below.
 
 ### Windows
 

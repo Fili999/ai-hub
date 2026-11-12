@@ -11,9 +11,21 @@ AI Hub manages files and instructions that AI systems can execute. Principles: l
 | System Packages | Never arbitrary text: validated `{manager, package}`, commands constructed strictly by code; AI tools install only with Settings permission | `scripts/lib/deps.mjs`, `scripts/needs.mjs` |
 | Git | Fixed arguments only, never shell, never `--force`, fast-forward pulls only, push only upon explicit confirmation; secret detection before push | `scripts/lib/repo.mjs` |
 | Sync | Touches only items linked by the hub, does not overwrite unlinked files | `scripts/sync.mjs` |
-| File System | Writes restricted to validated directories (`skills/own`, `agents/own`, `external`), no `..`, no overwrites in guided creation | `scripts/lib/create.mjs`, `install.mjs` |
+| File System | Writes restricted to validated directories (`skills/own`, `agents/own`, `external`, `memory`), no `..`, no overwrites. Every folder from the hub root is checked: never a symlink or junction; files are opened with `O_NOFOLLOW` and re-verified after opening (TOCTOU); JSON files are written atomically | `scripts/lib/safefs.mjs`, `memory.mjs`, `create.mjs`, `install.mjs`, `sync.mjs` |
+| Install integrity | What is scanned is what is hashed, approved and installed: private snapshot → SHA-256 → scan → SHA-256 again → atomic replace with rollback → SHA-256 on the final copy. One cross-process lock for add / update / approve / remove | `scripts/lib/integrity.mjs`, `hublock.mjs`, `install.mjs` |
+| Scan results | Only a **complete** scan with recommendation `SAFE` can pass. Incomplete, malformed, unverifiable or contradictory results (missing/invalid score, unknown recommendation) block in `block` mode and warn in `warn` mode | `scripts/lib/spector.mjs` |
 
 These safeguards are not relaxed for convenience without a risk analysis recorded in `decisions.md`.
+
+## What the scan is, and what it is not
+
+- **SkillSpector is a scanner, not a sandbox.** It looks for known patterns in files. "No findings" means the scanner found nothing, not that the content is harmless. Nothing isolates a skill when your AI tool follows it: it runs with the permissions of that tool.
+- The hub's own heuristics (risk `low` / `medium` / `high`, flags such as `reads-env-secrets`, `exfiltration`, `prompt-injection`, `hidden-unicode`, `unscanned-content`) are regular expressions: a first look, not a boundary.
+- Every installed item records where it came from (repository, path), the exact commit, and the SHA-256 the approval is tied to. They are printed at install time and stored in `manifest.lock.json`.
+- Treat all skills as untrusted even when they come from GitHub, are popular, passed a scan, or were approved before. A skill whose content changed after approval is not activated.
+- Recommended: Settings → Security **Block**; install from a pinned commit (`--ref <sha>`); read the preview and the findings; run `npm run doctor` afterwards; `sync --mode copy` if AI tools should only ever see approved bytes.
+
+See [SECURITY_AUDIT.md](../SECURITY_AUDIT.md) for the audit record, residual risks and what was not verified.
 
 ## External Content and Prompt Injection
 
@@ -54,4 +66,8 @@ Commensurate with risk: authentication and authorization, tenant isolation, secr
 
 - New POST route: test token, `Origin`, `Content-Type`, and invalid inputs in `tests/ui.test.mjs`.
 - New write or delete: test that paths cannot escape allowed directories (including symlinks/junctions).
-- External content: test preview, provenance, and SkillSpector blocking.
+- External content: test preview, provenance, and SkillSpector blocking, including an **incomplete**, malformed or contradictory scanner result.
+- New write into `memory/` or any hub folder: use `scripts/lib/safefs.mjs` and test a symlink in an intermediate folder, in the final file, `..`, absolute paths, and a folder swapped between check and write.
+- New command execution: argument array, no shell; `tests/security-commands.test.mjs` forbids `exec*` and `shell:` outside the one validated place.
+- New external component (npm package, git package, GitHub Action): pin it to a version or commit (tested for dependencies and workflows).
+- Security tests live in `tests/security-*.test.mjs`; they use temporary folders only and never touch real user files.

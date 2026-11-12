@@ -6,7 +6,7 @@ AI Hub - macOS
 2. The first time, open Terminal, go to the folder and run the guided setup:
        cd ~/Documents/ai-hub
        ./bootstrap.sh
-   It checks Node.js (version 18 or newer), offers to install what is missing
+   It checks Node.js (version 22 or newer), offers to install what is missing
    with Homebrew (it always asks first), then runs the guided setup.
 
 3. From then on, double-click  start.command
@@ -17,7 +17,7 @@ macOS may block downloaded scripts ("cannot be opened because it is from an unid
 developer"). Either right-click the file -> Open -> Open, or remove the download flag once:
        xattr -dr com.apple.quarantine ~/Documents/ai-hub
 
-Minimum: macOS 12 or newer (Apple Silicon or Intel), Node.js 18+ (installed for you via
+Minimum: macOS 12 or newer (Apple Silicon or Intel), Node.js 22+ (installed for you via
 Homebrew if missing), about 200 MB of free disk space, a modern web browser.
 Optional: Git (installing skills from GitHub; macOS offers the Command Line Tools),
 one AI tool (Claude Code, Codex, Antigravity CLI or OpenCode).

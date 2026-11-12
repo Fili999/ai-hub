@@ -71,7 +71,7 @@ No duplicate registries exist. Future extensions (approvals, capabilities) belon
 
 ## Windows / macOS / Linux Compatibility
 
-- Pure Node 18+ and standard library: no OS-specific shell commands.
+- Pure Node 22+ and standard library: no OS-specific shell commands.
 - Line endings normalized by `.gitattributes` (LF, CRLF only for `.cmd`).
 - External content: exact-byte SHA-256 (`approval.mjs`), clone with `core.autocrlf=false`, and `skills/external/**`, `agents/external/**` marked `-text` in `.gitattributes`: approved hash matches identically across platforms (tested in `tests/approval.test.mjs`).
 - Tests run on every push across Linux, Windows, and macOS (`.github/workflows/test.yml`).

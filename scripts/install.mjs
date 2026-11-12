@@ -11,6 +11,9 @@ import { addLink, dropRefs, loadLock, loadRegistry, saveLock, saveRegistry, setC
 import { cloneSource, discoverItems, parseSource } from './lib/source.mjs';
 import { refreshGuideSafe } from './lib/guide.mjs';
 import { approvalRecord, packageHash, packagePath } from './lib/approval.mjs';
+import { IntegrityError, Transaction, assertHash, snapshotItem } from './lib/integrity.mjs';
+import { HubLockError, acquireHubLock } from './lib/hublock.mjs';
+import { UnsafePathError, assertContained } from './lib/safefs.mjs';
 import { describeScan, missingScannerHelp, resolveScanner, scanTarget, scannerVersion, securityPolicy, verdict } from './lib/spector.mjs';
 import { tFor } from './lib/i18n.mjs';
 
@@ -62,6 +65,10 @@ function packageDirName(src) {
 const destOf = (kind, name) =>
   kind === 'skill' ? path.join(root, 'skills', 'external', name) : path.join(root, 'agents', 'external', `${name}.md`);
 
+// Names are compared without case: on macOS/Windows "Foo" and "foo" are the SAME folder, so installing one over the
+// other would silently replace it (or remove it with --force) without the lock knowing.
+const keyOf = (kind, name) => `${kind}:${String(name).toLowerCase()}`;
+
 function riskOf(it) {
   return analyzeRisk(it.srcPath, { external: true, tools: it.tools, isAgent: it.kind === 'agent' });
 }
@@ -97,13 +104,14 @@ function securityGate(targets, { quiet = false, policy = securityPolicy(root) } 
     say(`  ${v === 'pass' ? '✔' : v === 'warn' ? '⚠' : '✖'} ${t.id}: ${describeScan(scan)}`);
     if (v !== 'pass' && scan.ok) for (const i of scan.issues.slice(0, 3)) say(`      ${i.severity} ${i.id} ${i.pattern}${i.file ? ` — ${i.file}${i.line ? `:${i.line}` : ''}` : ''}`);
   }
+  say(`  ℹ ${t('install.gate.notSandbox')}`);
   return out;
 }
 
 const securityRecord = (gate, id) => {
   const scan = gate.results.get(id);
   if (!scan?.ok) return undefined;
-  return { scanner: 'skillspector', version: gate.version, score: scan.score, severity: scan.severity, recommendation: scan.recommendation, issues: scan.issueCount, llm: scan.llm, scannedAt: now() };
+  return { scanner: 'skillspector', version: gate.version, score: scan.score, severity: scan.severity, recommendation: scan.recommendation, complete: scan.complete === true, issues: scan.issueCount, llm: scan.llm, scannedAt: now() };
 };
 
 function printItems(items, indent = '  ') {
@@ -195,7 +203,7 @@ async function cmdAdd(input) {
       }
     }
     if (!chosen.length) throw new Error(t('install.error.noneSelected'));
-    const clash = chosen.find((it, i) => chosen.findIndex((x) => x.kind === it.kind && x.name === it.name) !== i);
+    const clash = chosen.find((it, i) => chosen.findIndex((x) => keyOf(x.kind, x.name) === keyOf(it.kind, it.name)) !== i);
     if (clash && !flags.package) throw new Error(t('install.error.duplicateClash', { name: clash.name }));
 
     // --- assignment and categories
@@ -235,68 +243,90 @@ async function cmdAdd(input) {
 
     // --- collision checks (before writing anything)
     const lock = loadLock(root);
-    const byId = new Map([...index.skills, ...index.agents].map((e) => [e.id, e]));
+    const byId = new Map([...index.skills, ...index.agents].map((e) => [e.id.toLowerCase(), e]));
     if (pkgRel && fs.existsSync(path.join(root, pkgRel)) && !flags.force) throw new Error(t('install.error.packageExists', { path: pkgRel }));
     for (const it of chosen) {
       const id = `${it.kind}:${it.name}`;
       const dest = destFor(it);
-      if (byId.get(id)?.origin === 'own') throw new Error(t('install.error.existsOwn', { id }));
-      const locked = lock.entries.find((e) => e.kind === it.kind && e.name === it.name);
+      if (byId.get(id.toLowerCase())?.origin === 'own') throw new Error(t('install.error.existsOwn', { id }));
+      const locked = lock.entries.find((e) => keyOf(e.kind, e.name) === keyOf(it.kind, it.name));
       if ((locked || fs.existsSync(dest)) && !flags.force) {
         const from = locked ? ` da ${locked.source.repo}` : '';
         throw new Error(t('install.error.alreadyInstalled', { id, from }));
       }
     }
 
-    // --- security analysis (before writing anything)
-    const gate = securityGate(chosen.map((it) => ({ id: `${it.kind}:${it.name}`, path: it.srcPath })));
+    // --- immutable snapshot: the scanner, the hash, the approval and the installed copy all refer to the SAME bytes.
+    // Whatever happens to the downloaded files from now on cannot reach the hub (see lib/integrity.mjs).
+    const stage = path.join(tmp, 'stage');
+    const pkgSnap = pkgRel ? snapshotItem(base, path.join(stage, 'pkg'), path.basename(base) || 'package') : null;
+    const snapOf = new Map();
+    const ownSnaps = []; // real snapshots (not views into the package one): each is re-verified after the scan
+    chosen.forEach((it, i) => {
+      // a skill inside a package is covered by the package snapshot (and its hash)
+      if (pkgSnap && it.kind === 'skill') snapOf.set(it, { path: path.join(pkgSnap.path, path.relative(base, it.srcPath)), hash: pkgSnap.hash });
+      else {
+        const snap = snapshotItem(it.srcPath, path.join(stage, `i${i}`));
+        snapOf.set(it, snap);
+        ownSnaps.push(snap);
+      }
+    });
+
+    // --- security analysis (before writing anything), on the snapshot. A full package is scanned as a whole too:
+    // its shared files (outside the skill folders) are installed and approved with it.
+    const targets = chosen.map((it) => ({ id: `${it.kind}:${it.name}`, path: snapOf.get(it).path }));
+    if (pkgSnap) targets.push({ id: `package:${pkgRel}`, path: pkgSnap.path });
+    const gate = securityGate(targets);
     if (gate.blocked.length) {
       throw new Error(t('install.error.gateBlocked', { blocked: gate.blocked.join(', ') }));
     }
+    // the content that was scanned must still be exactly the content that was hashed
+    for (const snap of [pkgSnap, ...ownSnaps].filter(Boolean)) assertHash(snap.path, snap.hash, snap.path);
 
-    // --- writing (installing after viewing preview and analysis is user decision: recorded as approval)
+    // --- writing (installing after viewing preview and analysis is user decision: recorded as approval).
+    // Everything below is one transaction: the old version is moved aside, the new one is verified before and after
+    // being renamed into place, and any failure restores the previous state.
     const reg = loadRegistry(root);
-    // items replaced with --force: remove old copies first (and packages left empty)
-    const replaced = lock.entries.filter((e) => chosen.some((it) => it.kind === e.kind && it.name === e.name));
-    for (const e of replaced) removeEntryFiles(e, lock.entries.filter((x) => !replaced.includes(x)));
-    if (pkgRel) {
-      rmrf(path.join(root, pkgRel));
-      fs.mkdirSync(path.dirname(path.join(root, pkgRel)), { recursive: true });
-      const skipped = copyDir(base, path.join(root, pkgRel));
-      if (skipped) console.log(`ℹ ${t('install.log.skippedSymlinks', { id: pkgRel, count: skipped })}`);
-    }
-    const pkgHash = pkgRel ? packageHash(path.join(root, pkgRel)) : null;
-    for (const it of chosen) {
-      const id = `${it.kind}:${it.name}`;
-      const dest = destFor(it);
-      const inPackage = Boolean(pkgRel && it.kind === 'skill');
-      if (!inPackage) {
-        rmrf(dest);
-        fs.mkdirSync(path.dirname(dest), { recursive: true });
-        const skippedLinks = it.kind === 'skill' ? copyDir(it.srcPath, dest) : (fs.copyFileSync(it.srcPath, dest), 0);
-        if (skippedLinks) console.log(`ℹ ${t('install.log.skippedSymlinks', { id, count: skippedLinks })}`);
-      }
-      const rel = toPosix(path.relative(root, dest));
-      const hash = inPackage ? pkgHash : packageHash(dest);
+    const tx = new Transaction(root);
+    try {
+      // items replaced with --force: move old copies aside first (and packages left empty)
+      const replaced = lock.entries.filter((e) => chosen.some((it) => keyOf(it.kind, it.name) === keyOf(e.kind, e.name)));
+      for (const e of replaced) removeEntryFiles(e, lock.entries.filter((x) => !replaced.includes(x)), tx);
+      if (pkgSnap) tx.place(pkgSnap.path, path.join(root, pkgRel), pkgSnap.hash);
+      for (const it of chosen) {
+        const id = `${it.kind}:${it.name}`;
+        const dest = destFor(it);
+        const snap = snapOf.get(it);
+        const inPackage = Boolean(pkgRel && it.kind === 'skill');
+        if (!inPackage) tx.place(snap.path, dest, snap.hash);
+        const rel = toPosix(path.relative(root, dest));
+        const hash = snap.hash; // verified equal to the installed copy by tx.place()
 
-      lock.entries = lock.entries.filter((e) => !(e.kind === it.kind && e.name === it.name));
-      lock.entries.push({
-        kind: it.kind,
-        name: it.name,
-        path: rel,
-        source: { type: src.type, url: src.type === 'local' ? src.display : src.url, repo: src.repo, ref: src.ref, subpath: it.repoPath, commit },
-        installedAt: now(),
-        updatedAt: now(),
-        contentHash: hashPath(dest),
-        package: inPackage ? { path: pkgRel, hash, sourcePath: src.subpath || '.' } : { path: rel, hash },
-        approval: approvalRecord(hash, { via: via() }),
-        ...(securityRecord(gate, id) ? { security: securityRecord(gate, id) } : {}),
-      });
-      if (it.kind === 'skill') for (const a of to) addLink(reg, `agent:${a}`, id);
-      if (cats.length) setCategories(reg, id, cats);
+        lock.entries = lock.entries.filter((e) => keyOf(e.kind, e.name) !== keyOf(it.kind, it.name));
+        lock.entries.push({
+          kind: it.kind,
+          name: it.name,
+          path: rel,
+          source: { type: src.type, url: src.type === 'local' ? src.display : src.url, repo: src.repo, ref: src.ref, subpath: it.repoPath, commit },
+          installedAt: now(),
+          updatedAt: now(),
+          contentHash: hashPath(dest),
+          package: inPackage ? { path: pkgRel, hash, sourcePath: src.subpath || '.' } : { path: rel, hash },
+          approval: approvalRecord(hash, { via: via() }),
+          ...(securityRecord(gate, id) ? { security: securityRecord(gate, id) } : {}),
+        });
+        if (it.kind === 'skill') for (const a of to) addLink(reg, `agent:${a}`, id);
+        if (cats.length) setCategories(reg, id, cats);
+      }
+      saveRegistry(root, reg);
+      saveLock(root, lock);
+      tx.commit();
+    } catch (e) {
+      tx.rollback();
+      throw e;
+    } finally {
+      tx.dispose();
     }
-    saveLock(root, lock);
-    saveRegistry(root, reg);
     const idx = writeIndex(root, scanHub(root));
     refreshGuideSafe(root);
 
@@ -307,6 +337,9 @@ async function cmdAdd(input) {
       const where = it.kind === 'skill' ? (to.length ? t('install.where.assignedTo', { agents: to.join(', ') }) : t('install.where.generic')) : t('install.where.agent');
       const risk = r && r.risk !== 'low' ? ` — ${t('install.print.risk', { risk: r.risk })} (${r.flags.filter((f) => f !== 'external').join(', ')})` : '';
       console.log(`  • ${it.kind}:${it.name} → ${toPosix(path.relative(root, destFor(it)))}  [${where}]${risk}`);
+      // provenance: where it came from, which exact commit, and the hash the approval is tied to
+      const rec = lock.entries.find((e) => e.kind === it.kind && e.name === it.name);
+      if (rec) console.log(`      ${t('install.log.provenance', { repo: `${rec.source.repo}${rec.source.subpath && rec.source.subpath !== '.' ? `/${rec.source.subpath}` : ''}`, commit: rec.source.commit, hash: rec.approval.hash })}`);
     }
     const names = new Set(chosen.map((i) => `${i.kind}:${i.name}`));
     for (const w of idx.warnings.filter((x) => x.level !== 'info' && (!x.id || names.has(x.id)))) console.log(`  ⚠ ${w.message}`);
@@ -323,17 +356,31 @@ async function cmdAdd(input) {
 }
 
 /**
+ * Resolves a path taken from the lock file and checks that it is inside skills/external or agents/external with no
+ * symlink/junction on the way (the lock file comes from GitHub, so it is untrusted input).
+ */
+function externalTarget(rel) {
+  for (const base of ['skills/external', 'agents/external']) {
+    try {
+      return assertContained(root, base, path.resolve(root, rel), { t });
+    } catch (e) {
+      if (!(e instanceof UnsafePathError)) throw e;
+    }
+  }
+  throw new Error(t('install.error.lockPathNotAllowed', { path: rel }));
+}
+
+/**
  * Removes files for a lock entry. For a skill in a package, the package is removed only if no other entry
  * (among `others`) still uses it. Only writes inside skills/external and agents/external.
+ * With a Transaction the files are moved aside (restorable) instead of deleted.
  */
-function removeEntryFiles(e, others) {
-  const allowed = [path.join(root, 'skills', 'external'), path.join(root, 'agents', 'external')];
-  const inside = (abs) => allowed.some((a) => abs.startsWith(a + path.sep));
+function removeEntryFiles(e, others, tx = null) {
   const pkg = e.package?.sourcePath !== undefined ? e.package.path : null;
-  const target = path.resolve(root, pkg ?? e.path);
-  if (!inside(target)) throw new Error(t('install.error.lockPathNotAllowed', { path: pkg ?? e.path }));
+  const target = externalTarget(pkg ?? e.path);
   if (pkg && others.some((o) => o.package?.path === pkg)) return;
-  rmrf(target);
+  if (tx) tx.removeAside(target);
+  else rmrf(target);
 }
 
 // ---------------------------------------------------------------- list
@@ -408,27 +455,49 @@ async function cmdUpdate() {
           continue;
         }
         if (u.pkg) packageSize(from);
+        // immutable snapshot of the new version: it is what gets scanned, hashed, approved and installed
+        const snap = snapshotItem(from, path.join(tmp, `s${n++}`));
+        const memberPath = (m) => {
+          const rel = path.relative(from, sub(m.source.subpath));
+          return rel.startsWith('..') || path.isAbsolute(rel) ? sub(m.source.subpath) : path.join(snap.path, rel);
+        };
+        const targets = u.members.map((m) => ({ id: `${m.kind}:${m.name}`, path: memberPath(m) }));
+        if (u.pkg) targets.push({ id: `package:${u.pkg}`, path: snap.path });
         // new version passes through SkillSpector before replacing installed version
-        const gate = securityGate(u.members.map((m) => ({ id: `${m.kind}:${m.name}`, path: sub(m.source.subpath) })));
+        const gate = securityGate(targets);
         if (gate.blocked.length) {
           console.log(`✖ ${label}: ${t('install.update.blockedByScanner', { commit: first.source.commit.slice(0, 7) })}`);
           failed++;
           continue;
         }
-        rmrf(target);
-        if (u.pkg || first.kind === 'skill') copyDir(from, target);
-        else fs.copyFileSync(from, target);
-        const hash = packageHash(target);
+        assertHash(snap.path, snap.hash, label); // the scan must not have changed what was scanned
+        const hash = snap.hash;
         const before = first.source.commit.slice(0, 7);
-        for (const m of u.members) {
-          const id = `${m.kind}:${m.name}`;
-          if (securityRecord(gate, id)) m.security = securityRecord(gate, id);
-          m.source.commit = commit;
-          m.updatedAt = now();
-          m.contentHash = hashPath(path.join(root, m.path));
-          m.package = u.pkg ? { ...m.package, hash } : { path: m.path, hash };
-          // updating after analysis is user decision: approval moves to new version
-          m.approval = approvalRecord(hash, { via: via() });
+        const saved = structuredClone(u.members);
+        const tx = new Transaction(root);
+        try {
+          tx.place(snap.path, target, hash);
+          for (const m of u.members) {
+            const id = `${m.kind}:${m.name}`;
+            if (securityRecord(gate, id)) m.security = securityRecord(gate, id);
+            m.source.commit = commit;
+            m.updatedAt = now();
+            m.contentHash = hashPath(path.join(root, m.path));
+            m.package = u.pkg ? { ...m.package, hash } : { path: m.path, hash };
+            // updating after analysis is user decision: approval moves to new version
+            m.approval = approvalRecord(hash, { via: via() });
+          }
+          saveLock(root, lock); // saved per unit: a crash later cannot leave files and lock out of step
+          tx.commit();
+        } catch (e) {
+          tx.rollback();
+          u.members.forEach((m, i) => {
+            for (const k of Object.keys(m)) delete m[k];
+            Object.assign(m, saved[i]);
+          });
+          throw e;
+        } finally {
+          tx.dispose();
         }
         updated++;
         const r = analyzeRisk(target, { external: true, isAgent: first.kind === 'agent' && !u.pkg });
@@ -467,29 +536,46 @@ async function cmdApprove() {
   if (!positional.length) throw new Error(t('install.approve.usage'));
   const lock = loadLock(root);
   let failed = 0;
-  for (const u of units(pickEntries(lock, positional), lock.entries)) {
-    const label = unitLabel(u);
-    const target = path.join(root, u.pkg ?? u.members[0].path);
-    if (!fs.existsSync(target)) {
-      console.log(`✖ ${label}: ${t('install.approve.missing', { path: toPosix(path.relative(root, target)) })}`);
-      failed++;
-      continue;
+  await withTmp(async (tmp) => {
+    let n = 0;
+    for (const u of units(pickEntries(lock, positional), lock.entries)) {
+      const label = unitLabel(u);
+      const target = path.join(root, u.pkg ?? u.members[0].path);
+      if (!fs.existsSync(target)) {
+        console.log(`✖ ${label}: ${t('install.approve.missing', { path: toPosix(path.relative(root, target)) })}`);
+        failed++;
+        continue;
+      }
+      try {
+        // hash BEFORE the scan, scan a private snapshot of exactly those bytes, hash AGAIN afterwards: the approval is
+        // recorded only if the installed content never changed in between.
+        const hash = packageHash(target);
+        const snap = snapshotItem(target, path.join(tmp, `a${n++}`));
+        if (snap.hash !== hash) throw new IntegrityError(t('integrity.changed', { what: label, expected: hash.slice(0, 19), actual: snap.hash.slice(0, 19) }));
+        const targets = u.members.map((m) => ({ id: `${m.kind}:${m.name}`, path: path.join(snap.path, path.relative(target, path.join(root, m.path))) }));
+        if (u.pkg) targets.push({ id: `package:${u.pkg}`, path: snap.path });
+        const gate = securityGate(targets);
+        if (gate.blocked.length) {
+          console.log(`✖ ${label}: ${t('install.approve.blocked')}`);
+          failed++;
+          continue;
+        }
+        assertHash(snap.path, hash, label);
+        assertHash(target, hash, label);
+        for (const m of u.members) {
+          const id = `${m.kind}:${m.name}`;
+          if (securityRecord(gate, id)) m.security = securityRecord(gate, id);
+          m.package = u.pkg ? { ...m.package, hash } : { path: m.path, hash };
+          m.approval = approvalRecord(hash, { via: via() });
+        }
+        console.log(`✔ ${label}: ${t('install.approve.approved', { hash: hash.slice(0, 19) })}`);
+      } catch (err) {
+        if (!(err instanceof IntegrityError)) throw err;
+        console.log(`✖ ${label}: ${err.message}`);
+        failed++;
+      }
     }
-    const gate = securityGate(u.members.map((m) => ({ id: `${m.kind}:${m.name}`, path: path.join(root, m.path) })));
-    if (gate.blocked.length) {
-      console.log(`✖ ${label}: ${t('install.approve.blocked')}`);
-      failed++;
-      continue;
-    }
-    const hash = packageHash(target);
-    for (const m of u.members) {
-      const id = `${m.kind}:${m.name}`;
-      if (securityRecord(gate, id)) m.security = securityRecord(gate, id);
-      m.package = u.pkg ? { ...m.package, hash } : { path: m.path, hash };
-      m.approval = approvalRecord(hash, { via: via() });
-    }
-    console.log(`✔ ${label}: ${t('install.approve.approved', { hash: hash.slice(0, 19) })}`);
-  }
+  });
   saveLock(root, lock);
   writeIndex(root, scanHub(root));
   if (failed) process.exitCode = 1;
@@ -501,11 +587,7 @@ async function cmdRemove() {
   const lock = loadLock(root);
   // a skill belonging to a package cannot be removed alone (would alter approved package): remove full package
   const targets = units(pickEntries(lock, positional), lock.entries).flatMap((u) => u.members);
-  for (const e of targets) {
-    const abs = path.resolve(root, e.package?.sourcePath !== undefined ? e.package.path : e.path);
-    const allowed = [path.join(root, 'skills', 'external'), path.join(root, 'agents', 'external')];
-    if (!allowed.some((a) => abs.startsWith(a + path.sep))) throw new Error(t('install.error.lockPathNotAllowed', { path: e.path }));
-  }
+  for (const e of targets) externalTarget(e.package?.sourcePath !== undefined ? e.package.path : e.path);
   const list = targets.map((t) => `${t.kind}:${t.name}`).join(', ');
   if (!flags.yes) {
     if (!isInteractive()) throw new Error(t('install.remove.confirmHelp', { list }));
@@ -528,7 +610,11 @@ async function cmdRemove() {
 }
 
 // ---------------------------------------------------------------- main
+// Anything that changes what is installed holds the hub lock, so two runs (terminal + web interface) cannot interleave.
+const mutating = flags.remove || flags.update || flags.approve || Boolean(positional[0] && !flags.list && !flags.help && !flags['dry-run']);
+let release = () => {};
 try {
+  if (mutating) release = acquireHubLock(root, flags.remove ? 'remove' : flags.update ? 'update' : flags.approve ? 'approve' : 'add');
   if (flags.help) console.log(USAGE);
   else if (flags.list) cmdList();
   else if (flags.remove) await cmdRemove();
@@ -536,9 +622,12 @@ try {
   else if (flags.approve) await cmdApprove();
   else if (!positional[0]) {
     console.log(USAGE);
+    release();
     process.exit(2);
   } else await cmdAdd(positional[0]);
+  release();
 } catch (e) {
+  release();
   console.error(`✖ ${e.message}`);
   process.exit(1);
 }

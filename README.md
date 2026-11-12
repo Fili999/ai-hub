@@ -10,7 +10,7 @@
 
 [![Tests](https://github.com/Fili999/ai-hub/actions/workflows/test.yml/badge.svg)](https://github.com/Fili999/ai-hub/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-4d8fff.svg)](LICENSE)
-[![Node.js 18+](https://img.shields.io/badge/node-%E2%89%A518-4fd1ff.svg)](https://nodejs.org)
+[![Node.js 22+](https://img.shields.io/badge/node-%E2%89%A522-4fd1ff.svg)](https://nodejs.org)
 [![Zero dependencies](https://img.shields.io/badge/npm%20dependencies-0-7ee0a8.svg)](package.json)
 [![Windows · macOS · Linux](https://img.shields.io/badge/platform-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-ffb454.svg)](#download)
 

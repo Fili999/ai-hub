@@ -10,7 +10,8 @@ import { hubLanguage, tFor } from './i18n.mjs';
 export const MANAGERS = ['winget', 'brew', 'npm', 'uv'];
 const PKG_RE = /^[A-Za-z0-9@][A-Za-z0-9@._/+-]{0,99}$/;
 // uv installs Python tools: a package name or a GitHub repository (git+https://github.com/owner/repo.git)
-const UV_GIT_RE = /^git\+https:\/\/github\.com\/[A-Za-z0-9_.-]{1,100}\/[A-Za-z0-9_.-]{1,100}\.git$/;
+// git packages must be pinned to a full commit (a branch or tag can be moved after review): .git@<40 hex>
+const UV_GIT_RE = /^git\+https:\/\/github\.com\/[A-Za-z0-9_.-]{1,100}\/[A-Za-z0-9_.-]{1,100}\.git(@[0-9a-f]{40})?$/;
 const CMD_RE = /^[A-Za-z0-9._+-]+$/;
 const LEVELS = ['required', 'recommended', 'optional'];
 export const PLATFORMS = ['win32', 'darwin', 'linux'];

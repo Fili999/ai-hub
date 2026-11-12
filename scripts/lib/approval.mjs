@@ -7,6 +7,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { listFiles } from './util.mjs';
+import { isInside } from './safefs.mjs';
 import { platformLabel } from './machine.mjs';
 import { tFor } from './i18n.mjs';
 
@@ -51,8 +52,9 @@ export function approvalRecord(hash, { via = 'cli', now = new Date() } = {}) {
  */
 export function verifyEntry(root, entry, cache = new Map()) {
   const rel = packagePath(entry);
-  const abs = path.join(root, rel);
-  if (!rel || !fs.existsSync(abs)) return { status: 'missing', reason: t('approval.missingPath', { path: rel }) };
+  const abs = path.resolve(root, rel ?? '');
+  // the lock file can come from GitHub: a path outside the hub is never hashed, approved or activated
+  if (!rel || !isInside(path.resolve(root), abs) || !fs.existsSync(abs)) return { status: 'missing', reason: t('approval.missingPath', { path: rel }) };
   const a = entry.approval;
   if (!a || a.status !== 'approved' || !a.hash) return { status: 'review-pending', reason: t('approval.reviewPending') };
   if (!cache.has(rel)) cache.set(rel, packageHash(abs));
