@@ -77,7 +77,7 @@ const REF_ITEM_RE = /^(?:(?:skill|agent):)?[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/;
 
 const trMain = tFor(HUB_ROOT); // messages printed when the file is run directly
 
-export async function startServer({ root = HUB_ROOT, port = 4173, strictPort = false, allowLocal = false, open = false, quiet = false, idleExitMs = 0, onIdle = null } = {}) {
+export async function startServer({ root = HUB_ROOT, port = 4173, strictPort = false, allowLocal = false, open = false, quiet = false, idleExitMs = 0, onIdle = null, updater = null } = {}) {
   const tr = tFor(root); // the hub language is re-read on every message
   const token = crypto.randomBytes(24).toString('base64url');
   let hosts = new Set();
@@ -522,6 +522,24 @@ export async function startServer({ root = HUB_ROOT, port = 4173, strictPort = f
       return r;
     },
 
+    // ---- new versions of the app: status never touches the network; check and apply are explicit actions
+    'GET /api/update': () => (updater ? updater.status() : { enabled: false }),
+
+    'POST /api/update/check': () => {
+      if (!updater) throw new HubError('Updates are not available here.', 404);
+      return updater.check(true);
+    },
+
+    // downloads, verifies and installs the new version (never overwrites files you changed); needs "confirm": true
+    'POST /api/update/apply': async (b) => {
+      if (!updater) throw new HubError('Updates are not available here.', 404);
+      if (b.confirm !== true) throw new HubError(tr('server.confirmNeeded'), 400);
+      const s = await exclusive(() => updater.apply());
+      cache.clear();
+      tick();
+      return s;
+    },
+
     'POST /api/sync': async (b) => {
       for (const k of ['instructions', 'claudeMd']) if (b[k] !== undefined && typeof b[k] !== 'boolean') throw new HubError(`${k} must be true or false.`, 400);
       const r = await exclusive(() => runScript('sync.mjs', b.instructions === true || b.claudeMd === true ? ['--instructions'] : []));
@@ -689,6 +707,7 @@ export async function startServer({ root = HUB_ROOT, port = 4173, strictPort = f
   const url = `http://127.0.0.1:${actual}/`;
 
   if (open) openBrowser(url);
+  updater?.start();
 
   // "App" mode (idleExitMs > 0): with no terminal window there is no obvious way to stop the hub, so it stops by itself
   // when no page has been connected (the page keeps /api/events open) for idleExitMs, or if none ever connects in that time.
@@ -715,6 +734,7 @@ export async function startServer({ root = HUB_ROOT, port = 4173, strictPort = f
       new Promise((resolve) => {
         clearInterval(poller);
         clearInterval(keepAlive);
+        updater?.stop();
         if (idleCheck) clearInterval(idleCheck);
         for (const c of clients) c.end();
         server.close(() => resolve());
@@ -749,7 +769,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     process.exit(2);
   }
   try {
-    const app = await startServer({ port, strictPort: explicit, allowLocal: Boolean(flags['allow-local']), open: !flags['no-open'] });
+    const { createUpdater } = await import('../scripts/lib/updater.mjs');
+    const app = await startServer({ port, strictPort: explicit, allowLocal: Boolean(flags['allow-local']), open: !flags['no-open'], updater: createUpdater(HUB_ROOT) });
     console.log(trMain('server.started', { url: app.url }));
     console.log(`  ${trMain('server.folder', { root: HUB_ROOT })}`);
     console.log(`  ${trMain('server.localOnly')}`);

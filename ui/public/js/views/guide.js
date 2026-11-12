@@ -32,7 +32,7 @@ export default function create(ctx) {
     if (loading) return;
     loading = true;
     try {
-      const { markdown } = await api.guide(force, lang);
+      const { markdown } = await api.guide(force);
       const keepTop = scroller.scrollTop;
       clear(prose);
       prose.append(renderMarkdown(markdown));

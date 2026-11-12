@@ -16,6 +16,7 @@ export const SECTIONS = [
   { id: 'usage', label: 'Skill and agent usage' },
   { id: 'memory', label: 'Memory' },
   { id: 'interface', label: 'Interface' },
+  { id: 'updates', label: 'Updates' },
   { id: 'sync', label: 'Multi-computer sync' },
 ];
 
@@ -157,6 +158,17 @@ export const SCHEMA = {
     default: 'en',
     label: 'Language',
     help: 'Language of the interface, the guide and command messages.',
+  },
+  'updates.mode': {
+    section: 'updates',
+    type: 'enum',
+    values: ['notify', 'auto', 'off'],
+    valueLabels: { notify: 'Tell me', auto: 'Update automatically', off: 'Never check' },
+    default: 'notify',
+    label: 'New versions of AI Hub',
+    help:
+      'Tell me: checks GitHub once a day and shows a banner when a new version is out; you press Update. Update automatically: also installs it (your own changes are never overwritten). ' +
+      'Never check: no automatic request to GitHub at all. Only the app you downloaded can update itself; a git clone keeps using its own sync.',
   },
   'sync.github': {
     section: 'sync',
