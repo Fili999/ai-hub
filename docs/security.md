@@ -13,6 +13,7 @@ AI Hub manages files and instructions that AI systems can execute. Principles: l
 | Sync | Touches only items linked by the hub, does not overwrite unlinked files | `scripts/sync.mjs` |
 | File System | Writes restricted to validated directories (`skills/own`, `agents/own`, `external`, `memory`), no `..`, no overwrites. Every folder from the hub root is checked: never a symlink or junction; files are opened with `O_NOFOLLOW` and re-verified after opening (TOCTOU); JSON files are written atomically | `scripts/lib/safefs.mjs`, `memory.mjs`, `create.mjs`, `install.mjs`, `sync.mjs` |
 | Install integrity | What is scanned is what is hashed, approved and installed: private snapshot → SHA-256 → scan → SHA-256 again → atomic replace with rollback → SHA-256 on the final copy. One cross-process lock for add / update / approve / remove | `scripts/lib/integrity.mjs`, `hublock.mjs`, `install.mjs` |
+| App updates | Only https from GitHub hosts (redirects re-checked, size caps), archive must match the SHA-256 published in the same release, archive entries and manifest paths validated (no `..`, absolute paths, links), every file compared with its manifest hash, your data files and external skills never part of an update, refused if it needs a newer Node.js, previous files restored on failure, shared lock with installs, a newer applied version is never overwritten by an older app. Default is *notify*; *auto* and *off* are in Settings | `scripts/lib/updater.mjs`, `scripts/lib/appdata.mjs`, `tests/updater.test.mjs` |
 | Scan results | Only a **complete** scan with recommendation `SAFE` can pass. Incomplete, malformed, unverifiable or contradictory results (missing/invalid score, unknown recommendation) block in `block` mode and warn in `warn` mode | `scripts/lib/spector.mjs` |
 
 These safeguards are not relaxed for convenience without a risk analysis recorded in `decisions.md`.
@@ -69,5 +70,6 @@ Commensurate with risk: authentication and authorization, tenant isolation, secr
 - External content: test preview, provenance, and SkillSpector blocking, including an **incomplete**, malformed or contradictory scanner result.
 - New write into `memory/` or any hub folder: use `scripts/lib/safefs.mjs` and test a symlink in an intermediate folder, in the final file, `..`, absolute paths, and a folder swapped between check and write.
 - New command execution: argument array, no shell; `tests/security-commands.test.mjs` forbids `exec*` and `shell:` outside the one validated place.
+- Anything that downloads and applies code (updater): https + allow-listed hosts only, a checksum from the release, validated archive entries, rollback on failure, never overwrite user files.
 - New external component (npm package, git package, GitHub Action): pin it to a version or commit (tested for dependencies and workflows).
 - Security tests live in `tests/security-*.test.mjs`; they use temporary folders only and never touch real user files.

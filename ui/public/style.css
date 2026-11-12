@@ -635,3 +635,9 @@ label.check.setting input[type="checkbox"] { margin-top: 4px; width: 18px; heigh
   .teams-side { border-right: 0; border-bottom: 1px solid var(--rule); }
   .cat-row { grid-template-columns: 1fr 1fr; }
 }
+
+/* new version banner (js/updates.js) */
+.update-bar { padding: 8px 16px 0; }
+.update-bar .banner { align-items: center; }
+.update-bar .update-text { flex: 1; }
+.update-bar .update-text a { margin-left: 4px; }

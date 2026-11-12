@@ -1,6 +1,6 @@
 # Security audit and remediation
 
-Status record of the security audit of AI Hub (audited version `0.1.1`, fixes released in `0.1.2`). Companion of [docs/security.md](docs/security.md) (design and rules) and [SECURITY.md](SECURITY.md) (how to report a problem).
+Status record of the security audit of AI Hub (audited version `0.1.1`, fixes released in `0.1.2`; update channel in `0.1.3`). Companion of [docs/security.md](docs/security.md) (design and rules) and [SECURITY.md](SECURITY.md) (how to report a problem).
 
 Rule used throughout: **a finding is marked "Fixed" only when there is a regression test that fails on the old code and passes on the new code.** Whatever could not be verified is listed under [Not verified](#not-verified).
 
@@ -151,6 +151,12 @@ Open items (maintainer decisions, not changed):
 - **Legacy entries.** Items installed before approvals existed (`review-pending`) and external folders without a lock entry are still active (with a warning) to stay compatible. Run `npm run add -- --approve <name>` to bring them under hash protection.
 - **Anyone who controls the page can change settings.** `POST /api/settings` can set the SkillSpector mode to `off`. That is by design (it is the user's own UI); the CSP and the token protect it.
 - The hub's own `.githooks/post-merge` runs `sync` after a pull if you enable hooks with `npm run setup-hooks`. Pulls done by the hub disable hooks; your own `git pull` does not.
+
+## Update channel (added in 0.1.3)
+
+The downloaded app can now update itself (`scripts/lib/updater.mjs`), which is new attack surface. Controls: https and GitHub hosts only with every redirect re-checked and size caps; the archive must match the SHA-256 in the same release; archive entries, manifest paths and every file hash are verified; user data, external skills and settings are excluded from updates; a release that needs a newer Node.js is refused; changed files are backed up and restored on failure; a lock shared with installs; and an older app can never overwrite a newer applied version. Default mode is *notify*; *auto* is opt-in. Tested with a simulated GitHub (`tests/updater.test.mjs`) and by applying the real archive to a copy of an installed 0.1.0 hub.
+
+Limit: the checksum comes from the same release as the archive, so it protects against corruption or a swapped file in transit, not against someone who controls the repository or the release. That is the same trust as downloading the app. Not verified: the update from a real published release (the first one that contains the archive is 0.1.3).
 
 ## Recommended configuration
 

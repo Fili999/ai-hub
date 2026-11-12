@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds the downloadable bundles from the current commit (no dependencies besides git, zip and Node).
 #   .github/scripts/package.sh [output-folder]      (default: dist)
-# Output: ai-hub-windows.zip, ai-hub-macos.zip, SHA256SUMS.txt
+# Output: ai-hub-windows.zip, ai-hub-macos.zip, ai-hub-update.tar.gz (for the in-app update), SHA256SUMS.txt
 # The file names carry no version on purpose: https://github.com/<owner>/<repo>/releases/latest/download/<file> always works.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
@@ -36,5 +36,12 @@ bundle() { # $1 = windows | macos
 }
 bundle windows
 bundle macos
-(cd "$OUT" && sha256sum ./*.zip | sed 's# \./# #' > SHA256SUMS.txt)
+
+# What the in-app "Update" button downloads: the hub files as the apps ship them, with their manifest (file hashes).
+# The app checks this archive against SHA256SUMS.txt before it installs anything.
+node packaging/build.mjs stage "$WORK/update" > /dev/null
+COPYFILE_DISABLE=1 tar -czf "$OUT/ai-hub-update.tar.gz" -C "$WORK/update" .
+
+sums() { if command -v sha256sum > /dev/null; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
+(cd "$OUT" && sums ./*.zip ./*.tar.gz | sed 's# \./# #' > SHA256SUMS.txt)
 ls -la "$OUT"

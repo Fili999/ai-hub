@@ -111,7 +111,9 @@ try {
       process.exit(0);
     }
   };
-  app = await startServer({ root, port: 4173, open: !flag('no-open'), quiet: true, idleExitMs, onIdle: stop });
+  // the updater lives in the user's copy of the hub, so an in-app update also updates the updater itself
+  const { createUpdater } = await import(pathToFileURL(path.join(root, 'scripts', 'lib', 'updater.mjs')).href);
+  app = await startServer({ root, port: 4173, open: !flag('no-open'), quiet: true, idleExitMs, onIdle: stop, updater: createUpdater(root) });
   writeRuntime(root, { pid: process.pid, url: app.url });
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);

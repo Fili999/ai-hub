@@ -225,6 +225,12 @@ Accepted links: `https://github.com/user/repo`, links to subfolders or branches,
 
 **NVIDIA SkillSpector.** Before writing to disk (install or update), each item from GitHub is checked by [SkillSpector](https://github.com/NVIDIA/SkillSpector), which scans for prompt injections, data exfiltration, dangerous scripts, and over 70 known patterns, returning `SAFE`, `CAUTION`, or `DO_NOT_INSTALL`. Under **Block** mode (default), items recommended against, failed scans, or missing scanner prevent installation; **Warn** shows the verdict but lets you proceed; **Off** disables scanning. Verdict is recorded in `manifest.lock.json`. In the Install tab you can scan during preview (up to 20 items at a time); from terminal: `npm run add -- <link> --dry-run --scan --only name`. Static analysis takes a few seconds per item; AI analysis (configured in Settings) requires `SKILLSPECTOR_PROVIDER`.
 
+## Updating AI Hub itself
+
+- **The app you downloaded** (`AI Hub.app`, `AI-Hub-Setup.exe`) checks GitHub once a day for a new version and shows a banner at the top: press **Update now**. It downloads the update, verifies it against the checksum published with the release, and replaces only the files the app itself put there: **anything you changed stays as it is**, your skills, memory, settings and links are never touched. Then close and reopen AI Hub. In Settings → *Updates* you can choose *Tell me* (default), *Update automatically*, or *Never check* (no automatic request to GitHub at all).
+- A **git clone** keeps using the GitHub button below. A copy from the classic `.zip` bundle only gets the banner with a link to the release page.
+- The first version that can update itself is 0.1.3: older downloads need one manual download of the new app.
+
 ## Keeping Computers in Sync
 
 **This part is optional** and off by default: turn it on in Settings → *Multi-computer sync* (or in the first-time setup) if you keep your hub in your own GitHub repository and use it on more than one computer. Then Mac and Windows share the same repository and only git diffs are transferred.

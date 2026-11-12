@@ -7,6 +7,7 @@ import { createDrawer } from './views/detail.js';
 import { isDark, toggleTheme } from './theme.js';
 import { refreshLocal, startSync } from './sync.js';
 import { t } from './i18n.js';
+import { startUpdates } from './updates.js';
 
 const VIEWS = [
   { id: 'graph', labelKey: 'ui.tab.graph', icon: 'graph', load: () => import('./views/graph.js') },
@@ -193,5 +194,6 @@ await refresh();
 // cross-machine sync is optional: without it, GitHub button is hidden
 if (store.state?.settings?.['sync.github']) startSync();
 else document.getElementById('sync').hidden = true;
+startUpdates(document.getElementById('update-bar'));
 if (store.state && !store.state.configured && !location.hash.startsWith('#/welcome')) location.hash = '#/welcome';
 if (!store.state) toast(store.error ?? t('ui.app.readErrorToast'), 'error');
